@@ -8,10 +8,10 @@ import (
 func TestCOMPParser_Parse(t *testing.T) {
 	parser := NewCOMPParser()
 	
-	// Test with sample data based on COMP9170.txt
-	content := `9170917000047 2102-530            028092023 12033171
-9170917000047 2102-510            028092023 12033171
-9170917000047 2102-520            028092023 12033171`
+	// Test with sample data based on COMP9170.txt (65 characters per line)
+	content := `9170917000047 2102-530            028092023 12033171106062024    
+9170917000047 2102-510            028092023 12033171106062024    
+9170917000047 2102-520            028092023 12033171106062024    `
 
 	records, err := parser.Parse(content)
 	if err != nil {
@@ -23,20 +23,32 @@ func TestCOMPParser_Parse(t *testing.T) {
 	}
 
 	// Test first record
-	if records[0]["ID"] != "9170917000047" {
-		t.Errorf("Expected ID '9170917000047', got '%s'", records[0]["ID"])
+	if records[0]["INSTIT"] != "9170" {
+		t.Errorf("Expected INSTIT '9170', got '%s'", records[0]["INSTIT"])
+	}
+
+	if records[0]["ID"] != "917000047" {
+		t.Errorf("Expected ID '917000047', got '%s'", records[0]["ID"])
 	}
 
 	if records[0]["COURSE"] != "2102-530" {
 		t.Errorf("Expected COURSE '2102-530', got '%s'", records[0]["COURSE"])
 	}
 
-	if records[0]["CRS_SRT"] != "028092023" {
-		t.Errorf("Expected CRS_SRT '028092023', got '%s'", records[0]["CRS_SRT"])
+	if records[0]["CRS_SRT"] != "28092023" {
+		t.Errorf("Expected CRS_SRT '28092023', got '%s'", records[0]["CRS_SRT"])
 	}
 
-	if records[0]["CRS_END"] != "12033171" {
-		t.Errorf("Expected CRS_END '12033171', got '%s'", records[0]["CRS_END"])
+	if records[0]["NSN"] != "120331711" {
+		t.Errorf("Expected NSN '120331711', got '%s'", records[0]["NSN"])
+	}
+
+	if records[0]["CRS_END"] != "06062024" {
+		t.Errorf("Expected CRS_END '06062024', got '%s'", records[0]["CRS_END"])
+	}
+
+	if records[0]["PBRF_CRS_COMP_YR"] != "" {
+		t.Errorf("Expected PBRF_CRS_COMP_YR '', got '%s'", records[0]["PBRF_CRS_COMP_YR"])
 	}
 }
 
@@ -45,10 +57,14 @@ func TestCOMPParser_GetHeaders(t *testing.T) {
 	headers := parser.GetHeaders()
 
 	expected := []string{
+		"Provider Code",
 		"Student Identification Code",
 		"Course Code", 
+		"Student Course Completion indicator",
 		"Course Start Date",
+		"National Student Number",
 		"Course End Date",
+		"PBRF Course Completion Year",
 	}
 
 	if len(headers) != len(expected) {
@@ -74,10 +90,10 @@ func TestCOMPParser_GetFileType(t *testing.T) {
 func TestCOMPParser_ValidateLine(t *testing.T) {
 	parser := NewCOMPParser()
 
-	// Test valid line length (52 characters)
-	validLine := "9170917000047 2102-530            028092023 12033171"
-	if len(validLine) != 52 {
-		t.Errorf("Test line should be 52 characters, got %d", len(validLine))
+	// Test valid line length (65 characters)
+	validLine := "9170917000047 2102-530            028092023 12033171106062024    "
+	if len(validLine) != 65 {
+		t.Errorf("Test line should be 65 characters, got %d", len(validLine))
 	}
 
 	err := parser.ValidateLine(validLine)
@@ -85,39 +101,58 @@ func TestCOMPParser_ValidateLine(t *testing.T) {
 		t.Errorf("Valid line should pass validation: %v", err)
 	}
 
-	// Test invalid line length
-	invalidLine := "short"
-	err = parser.ValidateLine(invalidLine)
+	// Test short line (should be allowed)
+	shortLine := "9170917000047 2102-530            028092023 12033171106062024"
+	err = parser.ValidateLine(shortLine)
+	if err != nil {
+		t.Errorf("Short line should pass validation (will be padded): %v", err)
+	}
+	
+	// Test line too long
+	longLine := strings.Repeat("X", 70)
+	err = parser.ValidateLine(longLine)
 	if err == nil {
-		t.Error("Invalid line should fail validation")
+		t.Error("Line too long should fail validation")
 	}
 }
 
 func TestCOMPParser_ParseLine(t *testing.T) {
 	parser := NewCOMPParser()
 
-	// Test normal line
-	line := "9170917000047 2102-530            028092023 12033171"
+	// Test normal line (65 characters)
+	line := "9170917000047 2102-530            028092023 12033171106062024    "
 	record, err := parser.parseLine(line)
 	if err != nil {
 		t.Fatalf("parseLine failed: %v", err)
 	}
 
 	// Verify all fields are extracted correctly
-	if record["ID"] != "9170917000047" {
-		t.Errorf("ID: expected '9170917000047', got '%s'", record["ID"])
+	if record["INSTIT"] != "9170" {
+		t.Errorf("INSTIT: expected '9170', got '%s'", record["INSTIT"])
+	}
+
+	if record["ID"] != "917000047" {
+		t.Errorf("ID: expected '917000047', got '%s'", record["ID"])
 	}
 
 	if record["COURSE"] != "2102-530" {
 		t.Errorf("COURSE: expected '2102-530', got '%s'", record["COURSE"])
 	}
 
-	if record["CRS_SRT"] != "028092023" {
-		t.Errorf("CRS_SRT: expected '028092023', got '%s'", record["CRS_SRT"])
+	if record["CRS_SRT"] != "28092023" {
+		t.Errorf("CRS_SRT: expected '28092023', got '%s'", record["CRS_SRT"])
 	}
 
-	if record["CRS_END"] != "12033171" {
-		t.Errorf("CRS_END: expected '12033171', got '%s'", record["CRS_END"])
+	if record["NSN"] != "120331711" {
+		t.Errorf("NSN: expected '120331711', got '%s'", record["NSN"])
+	}
+
+	if record["CRS_END"] != "06062024" {
+		t.Errorf("CRS_END: expected '06062024', got '%s'", record["CRS_END"])
+	}
+
+	if record["PBRF_CRS_COMP_YR"] != "" {
+		t.Errorf("PBRF_CRS_COMP_YR: expected '', got '%s'", record["PBRF_CRS_COMP_YR"])
 	}
 }
 
@@ -125,7 +160,7 @@ func TestCOMPParser_ParseWithSpaces(t *testing.T) {
 	parser := NewCOMPParser()
 
 	// Test line with extra spaces (should be trimmed)
-	line := "9170917000047 2102-530            028092023 12033171"
+	line := "9170917000047 2102-530            028092023 12033171106062024    "
 	record, err := parser.parseLine(line)
 	if err != nil {
 		t.Fatalf("parseLine failed: %v", err)
@@ -134,6 +169,11 @@ func TestCOMPParser_ParseWithSpaces(t *testing.T) {
 	// Fields should be trimmed
 	if record["COURSE"] != "2102-530" {
 		t.Errorf("COURSE should be trimmed: got '%s'", record["COURSE"])
+	}
+
+	// Test that trailing spaces are properly handled
+	if record["PBRF_CRS_COMP_YR"] != "" {
+		t.Errorf("PBRF_CRS_COMP_YR should be trimmed: got '%s'", record["PBRF_CRS_COMP_YR"])
 	}
 }
 
@@ -153,11 +193,11 @@ func TestCOMPParser_EmptyContent(t *testing.T) {
 func TestCOMPParser_WithEmptyLines(t *testing.T) {
 	parser := NewCOMPParser()
 	
-	content := `9170917000047 2102-530            028092023 12033171
+	content := `9170917000047 2102-530            028092023 12033171106062024    
 
-9170917000047 2102-510            028092023 12033171
+9170917000047 2102-510            028092023 12033171106062024    
    
-9170917000047 2102-520            028092023 12033171`
+9170917000047 2102-520            028092023 12033171106062024    `
 
 	records, err := parser.Parse(content)
 	if err != nil {
@@ -172,16 +212,24 @@ func TestCOMPParser_WithEmptyLines(t *testing.T) {
 func TestCOMPParser_InvalidLineLength(t *testing.T) {
 	parser := NewCOMPParser()
 	
-	// Line too short
-	content := "9170917000047 2102-530"
+	// Line too long should fail
+	content := strings.Repeat("X", 70) // 70 characters, more than 65
 	
 	_, err := parser.Parse(content)
 	if err == nil {
-		t.Error("Expected error for invalid line length")
+		t.Error("Expected error for line too long")
 	}
 
-	if !strings.Contains(err.Error(), "invalid line length") {
-		t.Errorf("Expected line length error, got: %v", err)
+	if !strings.Contains(err.Error(), "line too long") {
+		t.Errorf("Expected line too long error, got: %v", err)
+	}
+	
+	// Line too short should work (will be padded)
+	// Use a line that has all required fields but missing trailing spaces
+	shortContent := "9170917000047 2102-530            028092023 12033171106062024"
+	_, err = parser.Parse(shortContent)
+	if err != nil {
+		t.Errorf("Short line should be handled by padding: %v", err)
 	}
 }
 
@@ -189,7 +237,7 @@ func TestCOMPParser_FieldBounds(t *testing.T) {
 	parser := NewCOMPParser()
 	
 	// Test with line exactly at boundary
-	line := strings.Repeat("X", 52)
+	line := strings.Repeat("X", 65)
 	_, err := parser.parseLine(line)
 	if err != nil {
 		t.Errorf("Valid length line should parse: %v", err)
@@ -199,8 +247,8 @@ func TestCOMPParser_FieldBounds(t *testing.T) {
 func TestCOMPParser_RequiredFields(t *testing.T) {
 	parser := NewCOMPParser()
 	
-	// Test with missing required field (empty ID)
-	line := "             2102-530            028092023 12033171"
+	// Test with missing required field (empty INSTIT)
+	line := "    917000047 2102-530            028092023 12033171106062024    "
 	_, err := parser.parseLine(line)
 	if err == nil {
 		t.Error("Expected error for empty required field")
@@ -214,9 +262,9 @@ func TestCOMPParser_RequiredFields(t *testing.T) {
 func TestCOMPParser_MultipleRecords(t *testing.T) {
 	parser := NewCOMPParser()
 	
-	content := `9170917000047 2102-530            028092023 12033171
-9170917000440 2102-530            027022024 16264822
-9170917000116 2102-530            028092023 11450702`
+	content := `9170917000047 2102-530            028092023 12033171106062024    
+9170917000440 2102-530            027022024 16264822205112024    
+9170917000116 2102-530            028092023 11450702406062024    `
 
 	records, err := parser.Parse(content)
 	if err != nil {
@@ -228,7 +276,7 @@ func TestCOMPParser_MultipleRecords(t *testing.T) {
 	}
 
 	// Verify different student IDs
-	expectedIDs := []string{"9170917000047", "9170917000440", "9170917000116"}
+	expectedIDs := []string{"917000047", "917000440", "917000116"}
 	for i, expectedID := range expectedIDs {
 		if records[i]["ID"] != expectedID {
 			t.Errorf("Record %d: expected ID '%s', got '%s'", i, expectedID, records[i]["ID"])
@@ -240,11 +288,11 @@ func TestCOMPParser_RealWorldData(t *testing.T) {
 	parser := NewCOMPParser()
 	
 	// Test with actual data from COMP9170.txt
-	content := `9170917000047 2102-530            028092023 12033171
-9170917000047 2102-510            028092023 12033171
-9170917000047 2102-520            028092023 12033171
-9170917000047 2102-240            028092023 12033171
-9170917000047 2102-516            028092023 12033171`
+	content := `9170917000047 2102-530            028092023 12033171106062024    
+9170917000047 2102-510            028092023 12033171106062024    
+9170917000047 2102-520            028092023 12033171106062024    
+9170917000047 2102-240            028092023 12033171106062024    
+9170917000047 2102-516            028092023 12033171106062024    `
 
 	records, err := parser.Parse(content)
 	if err != nil {
@@ -257,8 +305,8 @@ func TestCOMPParser_RealWorldData(t *testing.T) {
 
 	// Verify all records have the same student ID
 	for i, record := range records {
-		if record["ID"] != "9170917000047" {
-			t.Errorf("Record %d: expected ID '9170917000047', got '%s'", i, record["ID"])
+		if record["ID"] != "917000047" {
+			t.Errorf("Record %d: expected ID '917000047', got '%s'", i, record["ID"])
 		}
 	}
 
@@ -275,10 +323,10 @@ func TestCOMPParser_FieldExtraction(t *testing.T) {
 	parser := NewCOMPParser()
 	
 	// Test specific field positions
-	line := "9170917000047 2102-530            028092023 12033171"
-	//        ^            ^                   ^         ^
-	//        1            15                  36        45
-	//        |<-- 13 -->| |<----- 20 ----->| |<- 8 ->| |<-8->|
+	line := "9170917000047 2102-530            028092023 12033171106062024    "
+	//        ^   ^        ^                 ^^         ^        ^    ^
+	//        1   5        15                3536       44       54   62
+	//        |<4>|<--10-->|<------ 20 ----->||<--8-->|<--10-->|<-8->|<4>|
 	
 	record, err := parser.parseLine(line)
 	if err != nil {
@@ -286,7 +334,11 @@ func TestCOMPParser_FieldExtraction(t *testing.T) {
 	}
 
 	// Verify exact field extraction
-	if record["ID"] != "9170917000047" {
+	if record["INSTIT"] != "9170" {
+		t.Errorf("INSTIT extraction failed: got '%s'", record["INSTIT"])
+	}
+
+	if record["ID"] != "917000047" {
 		t.Errorf("ID extraction failed: got '%s'", record["ID"])
 	}
 
@@ -294,12 +346,20 @@ func TestCOMPParser_FieldExtraction(t *testing.T) {
 		t.Errorf("COURSE extraction failed: got '%s'", record["COURSE"])
 	}
 
-	if record["CRS_SRT"] != "028092023" {
+	if record["CRS_SRT"] != "28092023" {
 		t.Errorf("CRS_SRT extraction failed: got '%s'", record["CRS_SRT"])
 	}
 
-	if record["CRS_END"] != "12033171" {
+	if record["NSN"] != "120331711" {
+		t.Errorf("NSN extraction failed: got '%s'", record["NSN"])
+	}
+
+	if record["CRS_END"] != "06062024" {
 		t.Errorf("CRS_END extraction failed: got '%s'", record["CRS_END"])
+	}
+
+	if record["PBRF_CRS_COMP_YR"] != "" {
+		t.Errorf("PBRF_CRS_COMP_YR extraction failed: got '%s'", record["PBRF_CRS_COMP_YR"])
 	}
 }
 
@@ -311,12 +371,12 @@ func TestCOMPParser_Specification(t *testing.T) {
 		t.Errorf("Expected FileType 'COMP', got '%s'", spec.FileType)
 	}
 
-	if spec.LineLength != 52 {
-		t.Errorf("Expected LineLength 52, got %d", spec.LineLength)
+	if spec.LineLength != 65 {
+		t.Errorf("Expected LineLength 65, got %d", spec.LineLength)
 	}
 
-	if len(spec.Fields) != 4 {
-		t.Errorf("Expected 4 fields, got %d", len(spec.Fields))
+	if len(spec.Fields) != 8 {
+		t.Errorf("Expected 8 fields, got %d", len(spec.Fields))
 	}
 
 	// Test field specifications
@@ -325,10 +385,14 @@ func TestCOMPParser_Specification(t *testing.T) {
 		start  int
 		length int
 	}{
-		{"ID", 1, 13},
+		{"INSTIT", 1, 4},
+		{"ID", 5, 10},
 		{"COURSE", 15, 20},
+		{"COMPLETE", 35, 1},
 		{"CRS_SRT", 36, 8},
-		{"CRS_END", 45, 8},
+		{"NSN", 44, 10},
+		{"CRS_END", 54, 8},
+		{"PBRF_CRS_COMP_YR", 62, 4},
 	}
 
 	for i, expected := range expectedFields {
@@ -341,6 +405,49 @@ func TestCOMPParser_Specification(t *testing.T) {
 		}
 		if field.Length != expected.length {
 			t.Errorf("Field %d: expected length %d, got %d", i, expected.length, field.Length)
+		}
+	}
+}
+
+// Test with actual COMP9170.txt data structure
+func TestCOMPParser_ActualDataStructure(t *testing.T) {
+	parser := NewCOMPParser()
+	
+	// Sample line from the actual COMP9170.txt file
+	line := "9170917000047 2102-530            028092023 12033171106062024    "
+	
+	// Verify the line is exactly 65 characters
+	if len(line) != 65 {
+		t.Errorf("Expected line length 65, got %d", len(line))
+	}
+	
+	record, err := parser.parseLine(line)
+	if err != nil {
+		t.Fatalf("Failed to parse actual data: %v", err)
+	}
+	
+	// Verify the parsed fields match the expected structure
+	expectedValues := map[string]string{
+		"INSTIT":           "9170",
+		"ID":               "917000047",
+		"COURSE":           "2102-530",
+		"COMPLETE":         "0",         // This is '0' in the actual data
+		"CRS_SRT":          "28092023",
+		"NSN":              "120331711",
+		"CRS_END":          "06062024",
+		"PBRF_CRS_COMP_YR": "",         // This is empty (spaces) in the actual data
+	}
+	
+	for fieldName, expectedValue := range expectedValues {
+		if record[fieldName] != expectedValue {
+			t.Errorf("Field %s: expected '%s', got '%s'", fieldName, expectedValue, record[fieldName])
+		}
+	}
+	
+	// Verify all fields are present
+	for _, field := range parser.GetSpec().Fields {
+		if _, exists := record[field.Name]; !exists {
+			t.Errorf("Field %s missing from parsed record", field.Name)
 		}
 	}
 }

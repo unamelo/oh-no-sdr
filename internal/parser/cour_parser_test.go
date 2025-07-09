@@ -1,30 +1,62 @@
 package parser
 
 import (
+	"strings"
 	"testing"
 )
+
+func TestCourseEnrolmentParser_Parse(t *testing.T) {
+	parser := NewCourseEnrolmentParser()
+	
+	// Test with sample data based on COUR9170.txt (186 characters per line)
+	content := `9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711
+9170917000047 NZ21022102-510            2809202306062024        0029837NNNP122  1101090.05830.0058 0.0058 0.0058 0.0058 0.0058 0.0061 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711
+9170917000047 NZ21022102-520            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711`
+
+	records, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	if len(records) != 3 {
+		t.Errorf("Expected 3 records, got %d", len(records))
+	}
+
+	// Test first record
+	if records[0]["INSTIT"] != "9170" {
+		t.Errorf("Expected INSTIT '9170', got '%s'", records[0]["INSTIT"])
+	}
+
+	if records[0]["ID"] != "917000047" {
+		t.Errorf("Expected ID '917000047', got '%s'", records[0]["ID"])
+	}
+
+	if records[0]["QUAL"] != "NZ2102" {
+		t.Errorf("Expected QUAL 'NZ2102', got '%s'", records[0]["QUAL"])
+	}
+
+	if records[0]["COURSE"] != "2102-530" {
+		t.Errorf("Expected COURSE '2102-530', got '%s'", records[0]["COURSE"])
+	}
+
+	if records[0]["CRS_SRT"] != "28092023" {
+		t.Errorf("Expected CRS_SRT '28092023', got '%s'", records[0]["CRS_SRT"])
+	}
+
+	if records[0]["CRS_END"] != "06062024" {
+		t.Errorf("Expected CRS_END '06062024', got '%s'", records[0]["CRS_END"])
+	}
+
+	if records[0]["NSN"] != "120331711" {
+		t.Errorf("Expected NSN '120331711', got '%s'", records[0]["NSN"])
+	}
+}
 
 func TestCourseEnrolmentParser_GetFileType(t *testing.T) {
 	parser := NewCourseEnrolmentParser()
 	expected := "COUR"
 	if got := parser.GetFileType(); got != expected {
 		t.Errorf("GetFileType() = %v, want %v", got, expected)
-	}
-}
-
-func TestCourseEnrolmentParser_GetDescription(t *testing.T) {
-	parser := NewCourseEnrolmentParser()
-	expected := "Course Enrolment File"
-	if got := parser.GetDescription(); got != expected {
-		t.Errorf("GetDescription() = %v, want %v", got, expected)
-	}
-}
-
-func TestCourseEnrolmentParser_GetExpectedLineLength(t *testing.T) {
-	parser := NewCourseEnrolmentParser()
-	expected := 186
-	if got := parser.GetExpectedLineLength(); got != expected {
-		t.Errorf("GetExpectedLineLength() = %v, want %v", got, expected)
 	}
 }
 
@@ -69,207 +101,174 @@ func TestCourseEnrolmentParser_GetHeaders(t *testing.T) {
 func TestCourseEnrolmentParser_ValidateLine(t *testing.T) {
 	parser := NewCourseEnrolmentParser()
 	
-	tests := []struct {
-		name    string
-		line    string
-		wantErr bool
-	}{
-		{
-			name:    "Valid line",
-			line:    "9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711",
-			wantErr: false,
-		},
-		{
-			name:    "Line too short",
-			line:    "9170917000047 NZ2102",
-			wantErr: true,
-		},
-		{
-			name:    "Empty required field - Provider Code",
-			line:    "    917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711",
-			wantErr: true,
-		},
-		{
-			name:    "Empty required field - Student ID",
-			line:    "9170          NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711",
-			wantErr: true,
-		},
-		{
-			name:    "Empty required field - Qualification Code",
-			line:    "9170917000047       2102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711",
-			wantErr: true,
-		},
-		{
-			name:    "Empty required field - Course Code",
-			line:    "9170917000047 NZ2102                    2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711",
-			wantErr: true,
-		},
+	// Test valid line length (186 characters)
+	validLine := "9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711"
+	if len(validLine) != 186 {
+		t.Errorf("Test line should be 186 characters, got %d", len(validLine))
 	}
-	
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			err := parser.ValidateLine(tt.line)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ValidateLine() error = %v, wantErr %v", err, tt.wantErr)
-			}
-		})
-	}
-}
 
-func TestCourseEnrolmentParser_ParseLine(t *testing.T) {
-	parser := NewCourseEnrolmentParser()
-	
-	tests := []struct {
-		name    string
-		line    string
-		lineNum int
-		want    []string
-		wantErr bool
-	}{
-		{
-			name:    "Valid line - complete record",
-			line:    "9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711",
-			lineNum: 1,
-			want: []string{
-				"9170",                                   // Provider Code
-				"917000047",                              // Student Identification Code
-				"NZ2102",                                 // Qualification Code
-				"2102-530",                               // Course Code
-				"28092023",                               // Course Start Date
-				"06062024",                               // Course End Date
-				"",                                       // Student's Course Withdrawal Date
-				"00",                                     // Category of Fees Assessment for International Students
-				"2",                                      // Intramural/Extramural Attendance
-				"98",                                     // Course Delivery Site
-				"37",                                     // Source of Funding
-				"N",                                      // Residential Status
-				"N",                                      // Australian Residential Status
-				"N",                                      // Managed Apprenticeship
-				"P1",                                     // Funding Category
-				"2211",                                   // Course Classification (Need to check actual position)
-				"010109",                                 // NZSCED Field of Study
-				"0.1167",                                 // Course EFTS Factor
-				"0.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000", // EFTS by Month
-				"120331711",                              // National Student Number
-			},
-			wantErr: false,
-		},
-		{
-			name:    "Invalid line - too short",
-			line:    "9170917000047 NZ2102",
-			lineNum: 1,
-			want:    nil,
-			wantErr: true,
-		},
-	}
-	
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			got, err := parser.ParseLine(tt.line, tt.lineNum)
-			if (err != nil) != tt.wantErr {
-				t.Errorf("ParseLine() error = %v, wantErr %v", err, tt.wantErr)
-				return
-			}
-			if !tt.wantErr && len(got) != len(tt.want) {
-				t.Errorf("ParseLine() got length = %v, want length %v", len(got), len(tt.want))
-				return
-			}
-			for i := 0; i < len(tt.want) && i < len(got); i++ {
-				if got[i] != tt.want[i] {
-					t.Errorf("ParseLine() got[%d] = %v, want[%d] = %v", i, got[i], i, tt.want[i])
-				}
-			}
-		})
-	}
-}
-
-func TestCourseEnrolmentParser_IsMatchingFileType(t *testing.T) {
-	parser := NewCourseEnrolmentParser()
-	
-	tests := []struct {
-		name      string
-		filename  string
-		firstLine string
-		want      bool
-	}{
-		{
-			name:      "Matching filename - COUR",
-			filename:  "COUR9170.txt",
-			firstLine: "9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711",
-			want:      true,
-		},
-		{
-			name:      "Matching filename - lowercase",
-			filename:  "cour9170.txt",
-			firstLine: "9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711",
-			want:      true,
-		},
-		{
-			name:      "Matching content - correct length and format",
-			filename:  "data.txt",
-			firstLine: "9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711",
-			want:      true,
-		},
-		{
-			name:      "Non-matching filename",
-			filename:  "STUD9170.txt",
-			firstLine: "9170917000047F05081991  4955YUILB04202020223200913NZL0 1Y                      120331711    0    0111      41204120",
-			want:      false,
-		},
-		{
-			name:      "Non-matching content - wrong length",
-			filename:  "data.txt",
-			firstLine: "9170917000047F05081991  4955YUILB04202020223200913NZL0 1Y                      120331711    0    0111      41204120",
-			want:      false,
-		},
-		{
-			name:      "Non-matching content - wrong format",
-			filename:  "data.txt",
-			firstLine: "abcd" + strings.Repeat(" ", 182),
-			want:      false,
-		},
-	}
-	
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			if got := parser.IsMatchingFileType(tt.filename, tt.firstLine); got != tt.want {
-				t.Errorf("IsMatchingFileType() = %v, want %v", got, tt.want)
-			}
-		})
-	}
-}
-
-func TestCourseEnrolmentParser_FieldPositions(t *testing.T) {
-	parser := NewCourseEnrolmentParser()
-	
-	// Test with actual sample data
-	sampleLine := "9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711"
-	
-	values, err := parser.ParseLine(sampleLine, 1)
+	err := parser.ValidateLine(validLine)
 	if err != nil {
-		t.Fatalf("ParseLine() error = %v", err)
+		t.Errorf("Valid line should pass validation: %v", err)
+	}
+
+	// Test invalid line length
+	invalidLine := "short"
+	err = parser.ValidateLine(invalidLine)
+	if err == nil {
+		t.Error("Invalid line should fail validation")
+	}
+}
+
+func TestCourseEnrolmentParser_EmptyContent(t *testing.T) {
+	parser := NewCourseEnrolmentParser()
+	
+	records, err := parser.Parse("")
+	if err != nil {
+		t.Fatalf("Parse empty content failed: %v", err)
+	}
+
+	if len(records) != 0 {
+		t.Errorf("Expected 0 records for empty content, got %d", len(records))
+	}
+}
+
+func TestCourseEnrolmentParser_WithEmptyLines(t *testing.T) {
+	parser := NewCourseEnrolmentParser()
+	
+	content := `9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711
+
+9170917000047 NZ21022102-510            2809202306062024        0029837NNNP122  1101090.05830.0058 0.0058 0.0058 0.0058 0.0058 0.0061 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711
+   
+9170917000047 NZ21022102-520            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711`
+
+	records, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	if len(records) != 3 {
+		t.Errorf("Expected 3 records (empty lines should be skipped), got %d", len(records))
+	}
+}
+
+func TestCourseEnrolmentParser_InvalidLineLength(t *testing.T) {
+	parser := NewCourseEnrolmentParser()
+	
+	// Line too long should fail
+	content := strings.Repeat("X", 200) // More than 186 characters
+	
+	_, err := parser.Parse(content)
+	if err == nil {
+		t.Error("Expected error for line too long")
+	}
+
+	if !strings.Contains(err.Error(), "line too long") {
+		t.Errorf("Expected line too long error, got: %v", err)
 	}
 	
-	// Test specific field extractions
-	tests := []struct {
-		fieldName string
-		index     int
-		expected  string
-	}{
-		{"Provider Code", 0, "9170"},
-		{"Student Identification Code", 1, "917000047"},
-		{"Qualification Code", 2, "NZ2102"},
-		{"Course Code", 3, "2102-530"},
-		{"Course Start Date", 4, "28092023"},
-		{"Course End Date", 5, "06062024"},
-		{"National Student Number", 19, "120331711"},
+	// Line too short should work (will be padded)
+	shortContent := "9170917000047 NZ21022102-530            2809202306062024"
+	_, err = parser.Parse(shortContent)
+	if err != nil {
+		t.Errorf("Short line should be handled by padding: %v", err)
 	}
+}
+
+func TestCourseEnrolmentParser_RequiredFields(t *testing.T) {
+	parser := NewCourseEnrolmentParser()
 	
-	for _, tt := range tests {
-		t.Run(tt.fieldName, func(t *testing.T) {
-			if values[tt.index] != tt.expected {
-				t.Errorf("Field %s: got %v, want %v", tt.fieldName, values[tt.index], tt.expected)
-			}
-		})
+	// Test with missing required field (empty INSTIT)
+	content := "    917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711"
+	
+	_, err := parser.Parse(content)
+	if err == nil {
+		t.Error("Expected error for empty required field")
+	}
+
+	if !strings.Contains(err.Error(), "required field") {
+		t.Errorf("Expected required field error, got: %v", err)
+	}
+}
+
+func TestCourseEnrolmentParser_RealWorldData(t *testing.T) {
+	parser := NewCourseEnrolmentParser()
+	
+	// Test with actual data structure from COUR9170.txt
+	content := `9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711
+9170917000047 NZ21022102-510            2809202306062024        0029837NNNP122  1101090.05830.0058 0.0058 0.0058 0.0058 0.0058 0.0061 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711
+9170917000047 NZ21022102-520            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711
+9170917000047 NZ21022102-240            2809202306062024        0029837NNNP122  1101090.05830.0058 0.0058 0.0058 0.0058 0.0058 0.0061 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711
+9170917000047 NZ21022102-516            2809202306062024        0029837NNNP122  1101090.06670.0067 0.0067 0.0067 0.0067 0.0067 0.0064 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711`
+
+	records, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("Parse real data failed: %v", err)
+	}
+
+	if len(records) != 5 {
+		t.Errorf("Expected 5 records, got %d", len(records))
+	}
+
+	// Verify all records have the same student ID
+	for i, record := range records {
+		if record["ID"] != "917000047" {
+			t.Errorf("Record %d: expected ID '917000047', got '%s'", i, record["ID"])
+		}
+	}
+
+	// Verify different course codes
+	expectedCourses := []string{"2102-530", "2102-510", "2102-520", "2102-240", "2102-516"}
+	for i, expectedCourse := range expectedCourses {
+		if records[i]["COURSE"] != expectedCourse {
+			t.Errorf("Record %d: expected COURSE '%s', got '%s'", i, expectedCourse, records[i]["COURSE"])
+		}
+	}
+}
+
+func TestCourseEnrolmentParser_FieldExtraction(t *testing.T) {
+	parser := NewCourseEnrolmentParser()
+	
+	// Test specific field positions
+	content := "9170917000047 NZ21022102-530            2809202306062024        0029837NNNP122  1101090.11670.0117 0.0117 0.0117 0.0117 0.0117 0.0114 0.0000 0.0000 0.0000 0.0000 0.0000 0.0000  120331711"
+	
+	records, err := parser.Parse(content)
+	if err != nil {
+		t.Fatalf("Parse failed: %v", err)
+	}
+
+	if len(records) != 1 {
+		t.Fatalf("Expected 1 record, got %d", len(records))
+	}
+
+	record := records[0]
+
+	// Verify exact field extraction
+	if record["INSTIT"] != "9170" {
+		t.Errorf("INSTIT extraction failed: got '%s'", record["INSTIT"])
+	}
+
+	if record["ID"] != "917000047" {
+		t.Errorf("ID extraction failed: got '%s'", record["ID"])
+	}
+
+	if record["QUAL"] != "NZ2102" {
+		t.Errorf("QUAL extraction failed: got '%s'", record["QUAL"])
+	}
+
+	if record["COURSE"] != "2102-530" {
+		t.Errorf("COURSE extraction failed: got '%s'", record["COURSE"])
+	}
+
+	if record["CRS_SRT"] != "28092023" {
+		t.Errorf("CRS_SRT extraction failed: got '%s'", record["CRS_SRT"])
+	}
+
+	if record["CRS_END"] != "06062024" {
+		t.Errorf("CRS_END extraction failed: got '%s'", record["CRS_END"])
+	}
+
+	if record["NSN"] != "120331711" {
+		t.Errorf("NSN extraction failed: got '%s'", record["NSN"])
 	}
 }

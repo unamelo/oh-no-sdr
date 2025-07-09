@@ -79,8 +79,8 @@ func (p *CourseEnrolmentParser) ValidateLine(line string) error {
 
 // validateLineWithNumber validates a single line format with line number
 func (p *CourseEnrolmentParser) validateLineWithNumber(line string, lineNum int) error {
-	if len(line) < p.spec.LineLength {
-		return fmt.Errorf("line %d: insufficient length %d, expected %d", lineNum, len(line), p.spec.LineLength)
+	if len(line) > p.spec.LineLength {
+		return fmt.Errorf("line %d: line too long %d, expected max %d", lineNum, len(line), p.spec.LineLength)
 	}
 	
 	// Check required fields
@@ -107,6 +107,11 @@ func (p *CourseEnrolmentParser) ParseLine(line string, lineNum int) ([]string, e
 		return nil, err
 	}
 	
+	// Pad line to expected length if it's shorter (common with trailing spaces missing)
+	if len(line) < p.spec.LineLength {
+		line = line + strings.Repeat(" ", p.spec.LineLength-len(line))
+	}
+	
 	values := make([]string, len(p.spec.Fields))
 	for i, field := range p.spec.Fields {
 		start := field.Start - 1
@@ -118,8 +123,8 @@ func (p *CourseEnrolmentParser) ParseLine(line string, lineNum int) ([]string, e
 		}
 		
 		value := line[start:end]
-		// Only trim trailing spaces for string fields to preserve data integrity
-		value = strings.TrimRight(value, " ")
+		// Trim both leading and trailing spaces
+		value = strings.TrimSpace(value)
 		values[i] = value
 	}
 	

@@ -47,6 +47,11 @@ func (p *COMPParser) Parse(content string) ([]map[string]string, error) {
 
 // parseLine extracts fields from a single line
 func (p *COMPParser) parseLine(line string) (map[string]string, error) {
+	// Pad line to expected length if it's shorter (common with trailing spaces missing)
+	if len(line) < p.spec.LineLength {
+		line = line + strings.Repeat(" ", p.spec.LineLength-len(line))
+	}
+	
 	record := make(map[string]string)
 
 	for _, field := range p.spec.Fields {
@@ -93,8 +98,8 @@ func (p *COMPParser) GetFileType() string {
 
 // ValidateLine validates a line's basic structure
 func (p *COMPParser) ValidateLine(line string) error {
-	if len(line) != p.spec.LineLength {
-		return fmt.Errorf("invalid line length: expected %d, got %d", p.spec.LineLength, len(line))
+	if len(line) > p.spec.LineLength {
+		return fmt.Errorf("line too long: expected max %d, got %d", p.spec.LineLength, len(line))
 	}
 	return nil
 }
