@@ -6,7 +6,8 @@ import (
 )
 
 type ResultsModel struct {
-	results string
+	results    string
+	backToMenu bool
 }
 
 func NewResultsModel() ResultsModel {
@@ -18,13 +19,22 @@ func (m ResultsModel) Init() tea.Cmd {
 }
 
 func (m ResultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
-	// TODO: Implement results navigation
+	switch msg := msg.(type) {
+	case tea.KeyMsg:
+		switch msg.String() {
+		case "ctrl+c", "q":
+			return m, tea.Quit
+		case "r", "enter":
+			m.backToMenu = true
+			return m, nil
+		}
+	}
 	return m, nil
 }
 
 func (m ResultsModel) View() string {
 	header := styles.SuccessStyle.Render(">> PARSING COMPLETE <<")
-	content := styles.SubtitleStyle.Render("\nSUCCESS: File parsed successfully!\n\nOutput: " + m.results + "\n\nPress [q] to quit or [r] to restart")
+	content := styles.SubtitleStyle.Render("\nSUCCESS: Files parsed successfully!\n\nOutput: " + m.results + "\n\nPress [r] to return to menu or [q] to quit")
 	
 	return styles.BoxStyle.Render(header + "\n" + content)
 }

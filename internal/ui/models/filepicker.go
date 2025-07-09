@@ -16,6 +16,7 @@ type FilePickerModel struct {
 	err          error
 	width        int
 	height       int
+	filterType   string
 }
 
 func NewFilePickerModel() FilePickerModel {
@@ -58,9 +59,12 @@ func (m FilePickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 func (m FilePickerModel) View() string {
 	var s strings.Builder
 	
-	// Header
-	header := styles.HighlightStyle.Render(">> SELECT AN SDR FILE TO PARSE <<")
-	s.WriteString(header + "\n\n")
+	// Header with filter info
+	header := ">> SELECT AN SDR FILE TO PARSE <<"
+	if m.filterType != "" && m.filterType != "all" {
+		header = fmt.Sprintf(">> SELECT A %s FILE TO PARSE <<", strings.ToUpper(m.filterType))
+	}
+	s.WriteString(styles.HighlightStyle.Render(header) + "\n\n")
 
 	if m.err != nil {
 		s.WriteString(styles.ErrorStyle.Render(fmt.Sprintf("ERROR: %v\n\n", m.err)))
@@ -75,4 +79,9 @@ func (m FilePickerModel) View() string {
 	s.WriteString(instructions)
 
 	return styles.BoxStyle.Render(s.String())
+}
+
+// SetFilter sets the file type filter for the picker
+func (m *FilePickerModel) SetFilter(fileType string) {
+	m.filterType = fileType
 }

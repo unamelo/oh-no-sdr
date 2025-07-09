@@ -9,24 +9,29 @@ import (
 type sessionState int
 
 const (
-	filePickerView sessionState = iota
+	menuView sessionState = iota
+	filePickerView
 	processingView
 	resultsView
 )
 
 type MainModel struct {
 	state      sessionState
+	menu       MenuModel
 	filePicker FilePickerModel
 	progress   ProgressModel
 	results    ResultsModel
 	err        error
 	width      int
 	height     int
+	currentFileType string
+	filesToProcess  []string
 }
 
 func NewMainModel() MainModel {
 	return MainModel{
-		state:      filePickerView,
+		state:      menuView,
+		menu:       NewMenuModel(),
 		filePicker: NewFilePickerModel(),
 		progress:   NewProgressModel(),
 		results:    NewResultsModel(),
@@ -34,7 +39,7 @@ func NewMainModel() MainModel {
 }
 
 func (m MainModel) Init() tea.Cmd {
-	return m.filePicker.Init()
+	return m.menu.Init()
 }
 
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
@@ -56,6 +61,36 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 	// Delegate to current view
 	switch m.state {
+	case menuView:
+		newMenu, cmd := m.menu.Update(msg)
+		m.menu = newMenu.(MenuModel)
+
+		// Check if option was selected
+		if m.menu.selectedIndex >= 0 {
+			fileType, files, err := m.menu.GetSelectedOption()
+			if err != nil {
+				m.err = err
+				return m, nil
+			}
+			
+			m.currentFileType = fileType
+			m.filesToProcess = files
+			
+			// If files were found, go directly to processing
+			if len(files) > 0 {
+				m.state = processingView
+				return m, tea.Batch(cmd, m.progress.StartProcessingMultiple(files))
+			} else {
+				// No files found, show file picker
+				m.state = filePickerView
+				m.filePicker = NewFilePickerModel()
+				// Set filter based on file type
+				m.filePicker.SetFilter(fileType)
+				return m, tea.Batch(cmd, m.filePicker.Init())
+			}
+		}
+		return m, cmd
+
 	case filePickerView:
 		newFilePicker, cmd := m.filePicker.Update(msg)
 		m.filePicker = newFilePicker.(FilePickerModel)
@@ -81,6 +116,14 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case resultsView:
 		newResults, cmd := m.results.Update(msg)
 		m.results = newResults.(ResultsModel)
+		
+		// Check if user wants to go back to menu
+		if m.results.backToMenu {
+			m.state = menuView
+			m.menu = NewMenuModel()
+			m.results.backToMenu = false
+			return m, m.menu.Init()
+		}
 		return m, cmd
 	}
 
@@ -101,6 +144,8 @@ func (m MainModel) View() string {
 
 	var content string
 	switch m.state {
+	case menuView:
+		content = m.menu.View()
 	case filePickerView:
 		content = m.filePicker.View()
 	case processingView:
