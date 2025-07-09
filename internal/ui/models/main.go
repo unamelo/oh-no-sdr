@@ -79,7 +79,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			// If files were found, go directly to processing
 			if len(files) > 0 {
 				m.state = processingView
-				return m, tea.Batch(cmd, m.progress.StartProcessingMultiple(files))
+				comparisonEnabled := m.menu.GetGenerateComparison()
+				return m, tea.Batch(cmd, m.progress.StartProcessingMultipleWithComparison(files, comparisonEnabled))
 			} else {
 				// No files found, show file picker
 				m.state = filePickerView
@@ -98,7 +99,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		// Check if file was selected
 		if m.filePicker.selectedFile != "" {
 			m.state = processingView
-			return m, tea.Batch(cmd, m.progress.StartProcessing(m.filePicker.selectedFile))
+			comparisonEnabled := m.menu.GetGenerateComparison()
+			return m, tea.Batch(cmd, m.progress.StartProcessingWithComparison(m.filePicker.selectedFile, comparisonEnabled))
 		}
 		return m, cmd
 

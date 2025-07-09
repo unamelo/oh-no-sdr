@@ -78,9 +78,18 @@ func (w *CSVWriter) writeSTUDRecords(writer *csv.Writer, records []map[string]st
 // writeCourseEnrolmentRecords writes COUR records using the proper field mapping
 func (w *CSVWriter) writeCourseEnrolmentRecords(writer *csv.Writer, records []map[string]string, parser *CourseEnrolmentParser) error {
 	for i, record := range records {
+		// Create row based on original fields
 		row := make([]string, len(parser.spec.Fields))
 		for j, field := range parser.spec.Fields {
 			row[j] = record[field.Name]
+		}
+		
+		// Add comparison data if enabled
+		if parser.comparisonEnabled {
+			// Add empty columns for spacing
+			row = append(row, "", "")
+			// Add completion status
+			row = append(row, record["COMPLETE"])
 		}
 		
 		if err := writer.Write(row); err != nil {
@@ -137,6 +146,11 @@ func (w *CSVWriter) writeQUALRecords(writer *csv.Writer, records []map[string]st
 
 // ProcessFile processes a single SDR file
 func ProcessFile(inputPath string, outputDir string) ProcessorResult {
+	return ProcessFileWithComparison(inputPath, outputDir, false)
+}
+
+// ProcessFileWithComparison processes a single SDR file with optional comparison mode
+func ProcessFileWithComparison(inputPath string, outputDir string, enableComparison bool) ProcessorResult {
 	result := ProcessorResult{
 		InputFile: inputPath,
 		Success:   false,
@@ -164,6 +178,22 @@ func ProcessFile(inputPath string, outputDir string) ProcessorResult {
 	if err != nil {
 		result.Error = fmt.Errorf("failed to get parser for file type %s: %w", fileType, err)
 		return result
+	}
+
+	// Enable comparison mode for COUR files if requested
+	if enableComparison && fileType == "COUR" {
+		if courParser, ok := parser.(*CourseEnrolmentParser); ok {
+			if err := courParser.EnableComparison(inputPath); err != nil {
+				result.Error = fmt.Errorf("failed to enable comparison mode: %w", err)
+				return result
+			}
+			
+			// Log any warnings about comparison data loading
+			warnings := courParser.GetComparisonWarnings()
+			for _, warning := range warnings {
+				fmt.Printf("Warning: %s\n", warning)
+			}
+		}
 	}
 
 	// Parse content

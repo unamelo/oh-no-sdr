@@ -7,14 +7,29 @@ import (
 
 // CourseEnrolmentParser handles parsing of COUR files
 type CourseEnrolmentParser struct {
-	spec FileSpec
+	spec              FileSpec
+	comparisonService *ComparisonService
+	comparisonEnabled bool
 }
 
 // NewCourseEnrolmentParser creates a new COUR parser
 func NewCourseEnrolmentParser() *CourseEnrolmentParser {
 	return &CourseEnrolmentParser{
-		spec: CourseEnrolmentSpec,
+		spec:              CourseEnrolmentSpec,
+		comparisonService: NewComparisonService(),
+		comparisonEnabled: false,
 	}
+}
+
+// EnableComparison enables comparison mode and loads COMP data
+func (p *CourseEnrolmentParser) EnableComparison(filePath string) error {
+	p.comparisonEnabled = true
+	return p.comparisonService.LoadCompData(filePath)
+}
+
+// GetComparisonWarnings returns any warnings from comparison loading
+func (p *CourseEnrolmentParser) GetComparisonWarnings() []string {
+	return p.comparisonService.GetWarnings()
 }
 
 // GetFileType returns the file type identifier
@@ -38,6 +53,15 @@ func (p *CourseEnrolmentParser) GetHeaders() []string {
 	for i, field := range p.spec.Fields {
 		headers[i] = field.Title
 	}
+	
+	// Add comparison data headers if enabled
+	if p.comparisonEnabled {
+		// Add empty columns for spacing (2 columns separation)
+		headers = append(headers, "", "") // Empty columns
+		// Add comparison data column
+		headers = append(headers, "Student Course Completion indicator")
+	}
+	
 	return headers
 }
 
@@ -64,6 +88,16 @@ func (p *CourseEnrolmentParser) Parse(content string) ([]map[string]string, erro
 		record := make(map[string]string)
 		for j, field := range p.spec.Fields {
 			record[field.Name] = values[j]
+		}
+		
+		// Add comparison data if enabled
+		if p.comparisonEnabled {
+			completionStatus := p.comparisonService.LookupCompletion(
+				record["ID"],
+				record["COURSE"],
+				record["CRS_SRT"],
+			)
+			record["COMPLETE"] = completionStatus
 		}
 		
 		records = append(records, record)

@@ -72,15 +72,23 @@ func (m ProgressModel) View() string {
 }
 
 func (m ProgressModel) StartProcessing(filename string) tea.Cmd {
+	return m.StartProcessingWithComparison(filename, false)
+}
+
+func (m ProgressModel) StartProcessingWithComparison(filename string, enableComparison bool) tea.Cmd {
 	m.filesToProcess = []string{filename}
 	m.currentFile = filename
 	m.totalFiles = 1
 	m.processedFiles = 0
 	m.error = nil
-	return processFiles([]string{filename})
+	return processFilesWithComparison([]string{filename}, enableComparison)
 }
 
 func (m ProgressModel) StartProcessingMultiple(files []string) tea.Cmd {
+	return m.StartProcessingMultipleWithComparison(files, false)
+}
+
+func (m ProgressModel) StartProcessingMultipleWithComparison(files []string, enableComparison bool) tea.Cmd {
 	m.filesToProcess = files
 	m.totalFiles = len(files)
 	m.processedFiles = 0
@@ -88,7 +96,7 @@ func (m ProgressModel) StartProcessingMultiple(files []string) tea.Cmd {
 	if len(files) > 0 {
 		m.currentFile = files[0]
 	}
-	return processFiles(files)
+	return processFilesWithComparison(files, enableComparison)
 }
 
 // ProcessCompleteMsg is sent when processing is complete
@@ -105,6 +113,11 @@ type ProcessProgressMsg struct {
 
 // processFiles processes one or more files
 func processFiles(files []string) tea.Cmd {
+	return processFilesWithComparison(files, false)
+}
+
+// processFilesWithComparison processes one or more files with optional comparison mode
+func processFilesWithComparison(files []string, enableComparison bool) tea.Cmd {
 	return func() tea.Msg {
 		var results []string
 		var processingError error
@@ -122,7 +135,7 @@ func processFiles(files []string) tea.Cmd {
 				// In a real implementation, you'd want to use a proper progress system
 			}
 			
-			result := parser.ProcessFile(file, currentDir)
+			result := parser.ProcessFileWithComparison(file, currentDir, enableComparison)
 			if result.Success {
 				results = append(results, fmt.Sprintf("✓ %s → %s (%d records)", 
 					filepath.Base(result.InputFile), 
