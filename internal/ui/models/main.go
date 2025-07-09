@@ -16,14 +16,14 @@ const (
 )
 
 type MainModel struct {
-	state      sessionState
-	menu       MenuModel
-	filePicker FilePickerModel
-	progress   ProgressModel
-	results    ResultsModel
-	err        error
-	width      int
-	height     int
+	state           sessionState
+	menu            MenuModel
+	filePicker      FilePickerModel
+	progress        ProgressModel
+	results         ResultsModel
+	err             error
+	width           int
+	height          int
 	currentFileType string
 	filesToProcess  []string
 }
@@ -72,10 +72,10 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.err = err
 				return m, nil
 			}
-			
+
 			m.currentFileType = fileType
 			m.filesToProcess = files
-			
+
 			// If files were found, go directly to processing
 			if len(files) > 0 {
 				m.state = processingView
@@ -118,7 +118,7 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case resultsView:
 		newResults, cmd := m.results.Update(msg)
 		m.results = newResults.(ResultsModel)
-		
+
 		// Check if user wants to go back to menu
 		if m.results.backToMenu {
 			m.state = menuView
@@ -133,6 +133,22 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m MainModel) View() string {
+	sadLogo := styles.ASCIIStyle.Render(`
+⡴⠒⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⠉⠳⡆⠀
+⣇⠰⠉⢙⡄⠀⠀⣴⠖⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣆⠁⠙⡆
+⠘⡇⢠⠞⠉⠙⣾⠃⢀⡼⠀⠀⠀⠀⠀⠀⠀⢀⣼⡀⠄⢷⣄⣀⠀⠀⠀⠀⠀⠀⠀⠰⠒⠲⡄⠀⣏⣆⣀⡍
+⠀⢠⡏⠀⡤⠒⠃⠀⡜⠀⠀⠀⠀⠀⢀⣴⠾⠛⡁⠀⠀⢀⣈⡉⠙⠳⣤⡀⠀⠀⠀⠘⣆⠀⣇⡼⢋⠀⠀⢱
+⠀⠘⣇⠀⠀⠀⠀⠀⡇⠀⠀⠀⠀⡴⢋⡣⠊⡩⠋⠀⠀⠀⠣⡉⠲⣄⠀⠙⢆⠀⠀⠀⣸⠀⢉⠀⢀⠿⠀⢸
+⠀⠀⠸⡄⠀⠈⢳⣄⡇⠀⠀⢀⡞⠀⠈⠀⢀⣴⣾⣿⣿⣿⣿⣦⡀⠀⠀⠀⠈⢧⠀⠀⢳⣰⠁⠀⠀⠀⣠⠃
+⠀⠀⠀⠘⢄⣀⣸⠃⠀⠀⠀⡸⠀⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣆⠀⠀⠀⠈⣇⠀⠀⠙⢄⣀⠤⠚⠁⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⠀⢠⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡄⠀⠀⠀⢹⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡀⠀⠀⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⣿⡀⠀⠀⢘⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⡇⠀⢰⣿⣿⣿⡿⠛⠁⠀⠉⠛⢿⣿⣿⣿⣧⠀⠀⣼⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡀⣸⣿⣿⠟⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⡀⢀⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡇⠹⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⡿⠁⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣤⣞⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢢⣀⣠⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠲⢤⣀⣀⠀⢀⣀⣀⠤⠒⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`)
+
 	// ASCII Art Header
 	asciiArt := styles.ASCIIStyle.Render(`
  ██████╗ ██╗  ██╗    ███╗   ██╗ ██████╗     ███████╗██████╗ ██████╗ 
@@ -142,7 +158,7 @@ func (m MainModel) View() string {
 ╚██████╔╝██║  ██║    ██║ ╚████║╚██████╔╝    ███████║██████╔╝██║  ██║
  ╚═════╝ ╚═╝  ╚═╝    ╚═╝  ╚═══╝ ╚═════╝     ╚══════╝╚═════╝ ╚═╝  ╚═╝`)
 
-	subtitle := styles.SubtitleStyle.Render("Parse Student Data Return files with style")
+	subtitle := styles.SubtitleStyle.Render("Parse TXT to csv")
 
 	var content string
 	switch m.state {
@@ -158,9 +174,9 @@ func (m MainModel) View() string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
+		sadLogo,
 		asciiArt,
 		subtitle,
-		"",
 		content,
 	)
 }
