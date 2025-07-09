@@ -17,6 +17,8 @@ type MenuModel struct {
 	selectedIndex int
 	width         int
 	height        int
+	// Checkbox for comparison data generation
+	generateComparison bool
 }
 
 func NewMenuModel() MenuModel {
@@ -30,6 +32,7 @@ func NewMenuModel() MenuModel {
 			"Parse QUAL File",
 		},
 		selectedIndex: -1,
+		generateComparison: true, // Default to checked
 	}
 }
 
@@ -48,12 +51,21 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 				m.cursor--
 			}
 		case "down", "j":
-			if m.cursor < len(m.choices)-1 {
+			// Total items = choices + 1 (for the checkbox)
+			if m.cursor < len(m.choices) {
 				m.cursor++
 			}
-		case "enter", " ":
-			m.selectedIndex = m.cursor
-			return m, nil
+		case "enter":
+			// Only select if cursor is on a choice (not the checkbox)
+			if m.cursor < len(m.choices) {
+				m.selectedIndex = m.cursor
+				return m, nil
+			}
+		case " ":
+			// Toggle checkbox if cursor is on it
+			if m.cursor == len(m.choices) {
+				m.generateComparison = !m.generateComparison
+			}
 		}
 	}
 	return m, nil
@@ -84,11 +96,41 @@ func (m MenuModel) View() string {
 	
 	s.WriteString("\n")
 	
+	// Options section
+	optionsHeader := styles.HighlightStyle.Render("OPTIONS:")
+	s.WriteString(optionsHeader + "\n")
+	
+	// Checkbox for comparison data generation
+	checkboxCursor := " "
+	if m.cursor == len(m.choices) {
+		checkboxCursor = ">"
+		checkboxCursor = lipgloss.NewStyle().Foreground(styles.Primary).Render(checkboxCursor)
+	}
+	
+	checkboxIcon := "☐"
+	if m.generateComparison {
+		checkboxIcon = "☑"
+	}
+	
+	checkboxText := "Generate comparison data"
+	if m.cursor == len(m.choices) {
+		checkboxText = styles.HighlightStyle.Render(checkboxText)
+	}
+	
+	s.WriteString(fmt.Sprintf("%s %s %s\n", checkboxCursor, checkboxIcon, checkboxText))
+	
+	s.WriteString("\n")
+	
 	// Instructions
-	instructions := styles.SubtitleStyle.Render("CONTROLS: [↑/↓] Navigate • [Enter] Select • [q] Quit")
+	instructions := styles.SubtitleStyle.Render("CONTROLS: [↑/↓] Navigate • [Enter] Select • [Space] Toggle • [q] Quit")
 	s.WriteString(instructions)
 
 	return styles.BoxStyle.Render(s.String())
+}
+
+// GetGenerateComparison returns the current state of the comparison checkbox
+func (m MenuModel) GetGenerateComparison() bool {
+	return m.generateComparison
 }
 
 // GetSelectedOption returns the selected option type and any auto-detected files
