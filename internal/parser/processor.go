@@ -44,9 +44,11 @@ func (w *CSVWriter) WriteCSV(records []map[string]string, headers []string, outp
 		return fmt.Errorf("failed to write headers: %w", err)
 	}
 
-	// For STUD parser, we need to map titles to field names
+	// Handle different parser types
 	if studParser, ok := parser.(*STUDParser); ok {
 		return w.writeSTUDRecords(writer, records, studParser)
+	} else if courParser, ok := parser.(*CourseEnrolmentParser); ok {
+		return w.writeCourseEnrolmentRecords(writer, records, courParser)
 	}
 
 	return fmt.Errorf("unsupported parser type")
@@ -54,6 +56,21 @@ func (w *CSVWriter) WriteCSV(records []map[string]string, headers []string, outp
 
 // writeSTUDRecords writes STUD records using the proper field mapping
 func (w *CSVWriter) writeSTUDRecords(writer *csv.Writer, records []map[string]string, parser *STUDParser) error {
+	for i, record := range records {
+		row := make([]string, len(parser.spec.Fields))
+		for j, field := range parser.spec.Fields {
+			row[j] = record[field.Name]
+		}
+		
+		if err := writer.Write(row); err != nil {
+			return fmt.Errorf("failed to write record %d: %w", i+1, err)
+		}
+	}
+	return nil
+}
+
+// writeCourseEnrolmentRecords writes COUR records using the proper field mapping
+func (w *CSVWriter) writeCourseEnrolmentRecords(writer *csv.Writer, records []map[string]string, parser *CourseEnrolmentParser) error {
 	for i, record := range records {
 		row := make([]string, len(parser.spec.Fields))
 		for j, field := range parser.spec.Fields {
@@ -150,6 +167,8 @@ func GetParser(fileType string) (Parser, error) {
 	switch strings.ToUpper(fileType) {
 	case "STUD":
 		return NewSTUDParser(), nil
+	case "COUR":
+		return NewCourseEnrolmentParser(), nil
 	default:
 		return nil, fmt.Errorf("unsupported file type: %s", fileType)
 	}
