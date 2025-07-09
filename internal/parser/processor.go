@@ -49,6 +49,10 @@ func (w *CSVWriter) WriteCSV(records []map[string]string, headers []string, outp
 		return w.writeSTUDRecords(writer, records, studParser)
 	} else if courParser, ok := parser.(*CourseEnrolmentParser); ok {
 		return w.writeCourseEnrolmentRecords(writer, records, courParser)
+	} else if cregParser, ok := parser.(*CREGParser); ok {
+		return w.writeCREGRecords(writer, records, cregParser)
+	} else if compParser, ok := parser.(*COMPParser); ok {
+		return w.writeCOMPRecords(writer, records, compParser)
 	}
 
 	return fmt.Errorf("unsupported parser type")
@@ -71,6 +75,36 @@ func (w *CSVWriter) writeSTUDRecords(writer *csv.Writer, records []map[string]st
 
 // writeCourseEnrolmentRecords writes COUR records using the proper field mapping
 func (w *CSVWriter) writeCourseEnrolmentRecords(writer *csv.Writer, records []map[string]string, parser *CourseEnrolmentParser) error {
+	for i, record := range records {
+		row := make([]string, len(parser.spec.Fields))
+		for j, field := range parser.spec.Fields {
+			row[j] = record[field.Name]
+		}
+		
+		if err := writer.Write(row); err != nil {
+			return fmt.Errorf("failed to write record %d: %w", i+1, err)
+		}
+	}
+	return nil
+}
+
+// writeCREGRecords writes CREG records using the proper field mapping
+func (w *CSVWriter) writeCREGRecords(writer *csv.Writer, records []map[string]string, parser *CREGParser) error {
+	for i, record := range records {
+		row := make([]string, len(parser.spec.Fields))
+		for j, field := range parser.spec.Fields {
+			row[j] = record[field.Name]
+		}
+		
+		if err := writer.Write(row); err != nil {
+			return fmt.Errorf("failed to write record %d: %w", i+1, err)
+		}
+	}
+	return nil
+}
+
+// writeCOMPRecords writes COMP records using the proper field mapping
+func (w *CSVWriter) writeCOMPRecords(writer *csv.Writer, records []map[string]string, parser *COMPParser) error {
 	for i, record := range records {
 		row := make([]string, len(parser.spec.Fields))
 		for j, field := range parser.spec.Fields {
@@ -169,6 +203,10 @@ func GetParser(fileType string) (Parser, error) {
 		return NewSTUDParser(), nil
 	case "COUR":
 		return NewCourseEnrolmentParser(), nil
+	case "CREG":
+		return NewCREGParser(), nil
+	case "COMP":
+		return NewCOMPParser(), nil
 	default:
 		return nil, fmt.Errorf("unsupported file type: %s", fileType)
 	}
