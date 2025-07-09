@@ -2,6 +2,7 @@ package models
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/unamelo/oh-no-sdr/internal/ui/styles"
 )
 
 type ProgressModel struct {
@@ -23,7 +24,10 @@ func (m ProgressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ProgressModel) View() string {
-	return "Processing... (TODO: Implement progress bar)"
+	header := styles.HighlightStyle.Render(">> PROCESSING SDR FILE <<")
+	content := styles.SubtitleStyle.Render("\nAnalyzing file structure...\nExtracting fields...\nGenerating CSV...\n\n[████████████████████████████████████████] 100%")
+	
+	return styles.BoxStyle.Render(header + "\n" + content)
 }
 
 func (m ProgressModel) StartProcessing(filename string) tea.Cmd {

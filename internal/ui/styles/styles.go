@@ -5,28 +5,36 @@ import (
 )
 
 var (
-	// Colours
-	Primary   = lipgloss.Color("#7C3AED")
-	Secondary = lipgloss.Color("#10B981")
-	Success   = lipgloss.Color("#059669")
-	Warning   = lipgloss.Color("#D97706")
-	Error     = lipgloss.Color("#DC2626")
-	Muted     = lipgloss.Color("#6B7280")
+	// Colours (more vibrant like OH MY ZSH)
+	Primary   = lipgloss.Color("#FF6B6B")  // Bright red
+	Secondary = lipgloss.Color("#4ECDC4")  // Bright teal
+	Accent    = lipgloss.Color("#45B7D1")  // Bright blue
+	Success   = lipgloss.Color("#96CEB4")  // Bright green
+	Warning   = lipgloss.Color("#FFEAA7")  // Bright yellow
+	Error     = lipgloss.Color("#FD79A8")  // Bright pink
+	Muted     = lipgloss.Color("#A29BFE")  // Bright purple
 
-	// Common styles
-	TitleStyle = lipgloss.NewStyle().
+	// ASCII Art Style
+	ASCIIStyle = lipgloss.NewStyle().
 		Bold(true).
 		Foreground(Primary).
-		MarginLeft(2)
+		MarginLeft(4).
+		MarginRight(4).
+		MarginTop(1).
+		MarginBottom(1)
 
 	SubtitleStyle = lipgloss.NewStyle().
-		Foreground(Muted).
-		MarginLeft(2)
+		Foreground(Secondary).
+		Bold(true).
+		MarginLeft(4).
+		MarginBottom(2)
 
 	BoxStyle = lipgloss.NewStyle().
 		Border(lipgloss.RoundedBorder()).
-		BorderForeground(Primary).
-		Padding(1, 2)
+		BorderForeground(Accent).
+		Padding(3, 6).
+		Margin(2, 4).
+		Width(100)
 
 	SuccessStyle = lipgloss.NewStyle().
 		Foreground(Success).
@@ -34,5 +42,9 @@ var (
 
 	ErrorStyle = lipgloss.NewStyle().
 		Foreground(Error).
+		Bold(true)
+
+	HighlightStyle = lipgloss.NewStyle().
+		Foreground(Warning).
 		Bold(true)
 )

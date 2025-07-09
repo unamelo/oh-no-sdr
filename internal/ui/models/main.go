@@ -42,6 +42,9 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
+		// Update child models with new size
+		m.filePicker.width = msg.Width
+		m.filePicker.height = msg.Height
 		return m, nil
 
 	case tea.KeyMsg:
@@ -85,8 +88,16 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m MainModel) View() string {
-	header := styles.TitleStyle.Render("🚀 SDR Parser")
-	subtitle := styles.SubtitleStyle.Render("Parse Student Data Return files with ease")
+	// ASCII Art Header
+	asciiArt := styles.ASCIIStyle.Render(`
+ ██████╗ ██╗  ██╗    ███╗   ██╗ ██████╗     ███████╗██████╗ ██████╗ 
+██╔═══██╗██║  ██║    ████╗  ██║██╔═══██╗    ██╔════╝██╔══██╗██╔══██╗
+██║   ██║███████║    ██╔██╗ ██║██║   ██║    ███████╗██║  ██║██████╔╝
+██║   ██║██╔══██║    ██║╚██╗██║██║   ██║    ╚════██║██║  ██║██╔══██╗
+╚██████╔╝██║  ██║    ██║ ╚████║╚██████╔╝    ███████║██████╔╝██║  ██║
+ ╚═════╝ ╚═╝  ╚═╝    ╚═╝  ╚═══╝ ╚═════╝     ╚══════╝╚═════╝ ╚═╝  ╚═╝`)
+
+	subtitle := styles.SubtitleStyle.Render("Parse Student Data Return files with style")
 
 	var content string
 	switch m.state {
@@ -100,7 +111,7 @@ func (m MainModel) View() string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		header,
+		asciiArt,
 		subtitle,
 		"",
 		content,

@@ -2,6 +2,7 @@ package models
 
 import (
 	tea "github.com/charmbracelet/bubbletea"
+	"github.com/unamelo/oh-no-sdr/internal/ui/styles"
 )
 
 type ResultsModel struct {
@@ -22,7 +23,10 @@ func (m ResultsModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m ResultsModel) View() string {
-	return "Results: " + m.results
+	header := styles.SuccessStyle.Render(">> PARSING COMPLETE <<")
+	content := styles.SubtitleStyle.Render("\nSUCCESS: File parsed successfully!\n\nOutput: " + m.results + "\n\nPress [q] to quit or [r] to restart")
+	
+	return styles.BoxStyle.Render(header + "\n" + content)
 }
 
 func (m *ResultsModel) SetResults(results string) {

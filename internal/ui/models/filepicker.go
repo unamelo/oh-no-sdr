@@ -14,6 +14,8 @@ type FilePickerModel struct {
 	filepicker   filepicker.Model
 	selectedFile string
 	err          error
+	width        int
+	height       int
 }
 
 func NewFilePickerModel() FilePickerModel {
@@ -55,15 +57,22 @@ func (m FilePickerModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m FilePickerModel) View() string {
 	var s strings.Builder
-	s.WriteString("📁 Select an SDR file to parse:\n\n")
+	
+	// Header
+	header := styles.HighlightStyle.Render(">> SELECT AN SDR FILE TO PARSE <<")
+	s.WriteString(header + "\n\n")
 
 	if m.err != nil {
-		s.WriteString(styles.ErrorStyle.Render(fmt.Sprintf("Error: %v\n\n", m.err)))
+		s.WriteString(styles.ErrorStyle.Render(fmt.Sprintf("ERROR: %v\n\n", m.err)))
 	}
 
+	// File picker with more space
 	s.WriteString(m.filepicker.View())
 	s.WriteString("\n\n")
-	s.WriteString(styles.SubtitleStyle.Render("Press q to quit"))
+	
+	// Instructions
+	instructions := styles.SubtitleStyle.Render("CONTROLS: [↑/↓] Navigate • [Enter] Select • [q] Quit")
+	s.WriteString(instructions)
 
 	return styles.BoxStyle.Render(s.String())
 }
