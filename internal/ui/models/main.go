@@ -1,6 +1,8 @@
 package models
 
 import (
+	"time"
+
 	tea "github.com/charmbracelet/bubbletea"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/unamelo/oh-no-sdr/internal/ui/styles"
@@ -15,6 +17,9 @@ const (
 	resultsView
 )
 
+// Animation message for updating the mascot colors
+type AnimationTickMsg struct{}
+
 type MainModel struct {
 	state           sessionState
 	menu            MenuModel
@@ -26,24 +31,41 @@ type MainModel struct {
 	height          int
 	currentFileType string
 	filesToProcess  []string
+	animationFrame  int // Add animation state
 }
 
 func NewMainModel() MainModel {
 	return MainModel{
-		state:      menuView,
-		menu:       NewMenuModel(),
-		filePicker: NewFilePickerModel(),
-		progress:   NewProgressModel(),
-		results:    NewResultsModel(),
+		state:          menuView,
+		menu:           NewMenuModel(),
+		filePicker:     NewFilePickerModel(),
+		progress:       NewProgressModel(),
+		results:        NewResultsModel(),
+		animationFrame: 0,
 	}
 }
 
 func (m MainModel) Init() tea.Cmd {
-	return m.menu.Init()
+	return tea.Batch(
+		m.menu.Init(),
+		animationTick(), // Start animation
+	)
+}
+
+// Animation command that sends regular updates
+func animationTick() tea.Cmd {
+	return tea.Tick(time.Millisecond*200, func(t time.Time) tea.Msg {
+		return AnimationTickMsg{}
+	})
 }
 
 func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 	switch msg := msg.(type) {
+	case AnimationTickMsg:
+		// Update animation frame and schedule next tick
+		m.animationFrame++
+		return m, animationTick()
+
 	case tea.WindowSizeMsg:
 		m.width = msg.Width
 		m.height = msg.Height
@@ -133,7 +155,8 @@ func (m MainModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 }
 
 func (m MainModel) View() string {
-	sadLogo := styles.ASCIIStyle.Render(`
+	// Original mascot ASCII art
+	sadLogoArt := `
 ⡴⠒⣄⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⣼⠉⠳⡆⠀
 ⣇⠰⠉⢙⡄⠀⠀⣴⠖⢦⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⣆⠁⠙⡆
 ⠘⡇⢠⠞⠉⠙⣾⠃⢀⡼⠀⠀⠀⠀⠀⠀⠀⢀⣼⡀⠄⢷⣄⣀⠀⠀⠀⠀⠀⠀⠀⠰⠒⠲⡄⠀⣏⣆⣀⡍
@@ -147,7 +170,10 @@ func (m MainModel) View() string {
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢠⡀⣸⣿⣿⠟⠀⠀⠀⠀⠀⠀⠀⢻⣿⣿⣿⡀⢀⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠘⡇⠹⠿⠋⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⢿⡿⠁⡏⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
 ⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠻⣤⣞⠁⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⢢⣀⣠⠇⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀
-⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠲⢤⣀⣀⠀⢀⣀⣀⠤⠒⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`)
+⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠙⠲⢤⣀⣀⠀⢀⣀⣀⠤⠒⠉⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀⠀`
+
+	// Create animated mascot with constantly changing colors!
+	animatedMascot := styles.CreateAnimatedMascot(sadLogoArt, m.animationFrame)
 
 	// ASCII Art Header
 	asciiArt := styles.ASCIIStyle.Render(`
@@ -174,7 +200,7 @@ func (m MainModel) View() string {
 
 	return lipgloss.JoinVertical(
 		lipgloss.Left,
-		sadLogo,
+		animatedMascot, // Using the animated mascot!
 		asciiArt,
 		subtitle,
 		content,

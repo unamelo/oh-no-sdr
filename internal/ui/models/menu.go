@@ -26,12 +26,12 @@ func NewMenuModel() MenuModel {
 		choices: []string{
 			"Parse All Files",
 			"Parse STUD File",
-			"Parse COUR File", 
+			"Parse COUR File",
 			"Parse CREG File",
 			"Parse COMP File",
 			"Parse QUAL File",
 		},
-		selectedIndex: -1,
+		selectedIndex:      -1,
 		generateComparison: true, // Default to checked
 	}
 }
@@ -73,7 +73,7 @@ func (m MenuModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 
 func (m MenuModel) View() string {
 	var s strings.Builder
-	
+
 	// Header
 	header := styles.HighlightStyle.Render(">> SELECT PARSING OPTION <<")
 	s.WriteString(header + "\n\n")
@@ -85,42 +85,42 @@ func (m MenuModel) View() string {
 			cursor = ">"
 			cursor = lipgloss.NewStyle().Foreground(styles.Primary).Render(cursor)
 		}
-		
+
 		// Style the selected option
 		if m.cursor == i {
 			choice = styles.HighlightStyle.Render(choice)
 		}
-		
+
 		s.WriteString(fmt.Sprintf("%s %s\n", cursor, choice))
 	}
-	
+
 	s.WriteString("\n")
-	
+
 	// Options section
 	optionsHeader := styles.HighlightStyle.Render("OPTIONS:")
 	s.WriteString(optionsHeader + "\n")
-	
+
 	// Checkbox for comparison data generation
 	checkboxCursor := " "
 	if m.cursor == len(m.choices) {
 		checkboxCursor = ">"
 		checkboxCursor = lipgloss.NewStyle().Foreground(styles.Primary).Render(checkboxCursor)
 	}
-	
+
 	checkboxIcon := "☐"
 	if m.generateComparison {
 		checkboxIcon = "☑"
 	}
-	
+
 	checkboxText := "Generate comparison data"
 	if m.cursor == len(m.choices) {
 		checkboxText = styles.HighlightStyle.Render(checkboxText)
 	}
-	
+
 	s.WriteString(fmt.Sprintf("%s %s %s\n", checkboxCursor, checkboxIcon, checkboxText))
-	
+
 	s.WriteString("\n")
-	
+
 	// Instructions
 	instructions := styles.SubtitleStyle.Render("CONTROLS: [↑/↓] Navigate • [Enter] Select • [Space] Toggle • [q] Quit")
 	s.WriteString(instructions)
@@ -138,12 +138,12 @@ func (m MenuModel) GetSelectedOption() (string, []string, error) {
 	if m.selectedIndex < 0 {
 		return "", nil, nil
 	}
-	
+
 	currentDir, err := os.Getwd()
 	if err != nil {
 		return "", nil, fmt.Errorf("failed to get current directory: %w", err)
 	}
-	
+
 	switch m.selectedIndex {
 	case 0: // Parse All Files
 		files, err := findAllSDRFiles(currentDir)
@@ -164,16 +164,16 @@ func (m MenuModel) GetSelectedOption() (string, []string, error) {
 		files, err := findFilesByType(currentDir, "QUAL")
 		return "qual", files, err
 	}
-	
+
 	return "", nil, nil
 }
 
 // findAllSDRFiles finds all SDR files in the directory
 func findAllSDRFiles(dir string) ([]string, error) {
 	var files []string
-	
+
 	fileTypes := []string{"STUD", "COUR", "CREG", "COMP", "QUAL"}
-	
+
 	for _, fileType := range fileTypes {
 		typeFiles, err := findFilesByType(dir, fileType)
 		if err != nil {
@@ -181,31 +181,31 @@ func findAllSDRFiles(dir string) ([]string, error) {
 		}
 		files = append(files, typeFiles...)
 	}
-	
+
 	return files, nil
 }
 
 // findFilesByType finds files of a specific type (e.g., STUD, COUR, etc.)
 func findFilesByType(dir, fileType string) ([]string, error) {
 	var files []string
-	
+
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		return nil, fmt.Errorf("failed to read directory: %w", err)
 	}
-	
+
 	for _, entry := range entries {
 		if entry.IsDir() {
 			continue
 		}
-		
+
 		name := entry.Name()
 		// Check if filename contains the file type and has .txt extension
-		if strings.Contains(strings.ToUpper(name), strings.ToUpper(fileType)) && 
-		   strings.HasSuffix(strings.ToLower(name), ".txt") {
+		if strings.Contains(strings.ToUpper(name), strings.ToUpper(fileType)) &&
+			strings.HasSuffix(strings.ToLower(name), ".txt") {
 			files = append(files, filepath.Join(dir, name))
 		}
 	}
-	
+
 	return files, nil
 }
