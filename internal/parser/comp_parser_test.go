@@ -7,7 +7,7 @@ import (
 
 func TestCOMPParser_Parse(t *testing.T) {
 	parser := NewCOMPParser()
-	
+
 	// Test with sample data based on COMP9170.txt (65 characters per line)
 	content := `9170917000047 2102-530            028092023 12033171106062024    
 9170917000047 2102-510            028092023 12033171106062024    
@@ -59,7 +59,7 @@ func TestCOMPParser_GetHeaders(t *testing.T) {
 	expected := []string{
 		"Provider Code",
 		"Student Identification Code",
-		"Course Code", 
+		"Course Code",
 		"Student Course Completion indicator",
 		"Course Start Date",
 		"National Student Number",
@@ -84,35 +84,6 @@ func TestCOMPParser_GetFileType(t *testing.T) {
 
 	if fileType != "COMP" {
 		t.Errorf("Expected file type 'COMP', got '%s'", fileType)
-	}
-}
-
-func TestCOMPParser_ValidateLine(t *testing.T) {
-	parser := NewCOMPParser()
-
-	// Test valid line length (65 characters)
-	validLine := "9170917000047 2102-530            028092023 12033171106062024    "
-	if len(validLine) != 65 {
-		t.Errorf("Test line should be 65 characters, got %d", len(validLine))
-	}
-
-	err := parser.ValidateLine(validLine)
-	if err != nil {
-		t.Errorf("Valid line should pass validation: %v", err)
-	}
-
-	// Test short line (should be allowed)
-	shortLine := "9170917000047 2102-530            028092023 12033171106062024"
-	err = parser.ValidateLine(shortLine)
-	if err != nil {
-		t.Errorf("Short line should pass validation (will be padded): %v", err)
-	}
-	
-	// Test line too long
-	longLine := strings.Repeat("X", 70)
-	err = parser.ValidateLine(longLine)
-	if err == nil {
-		t.Error("Line too long should fail validation")
 	}
 }
 
@@ -179,7 +150,7 @@ func TestCOMPParser_ParseWithSpaces(t *testing.T) {
 
 func TestCOMPParser_EmptyContent(t *testing.T) {
 	parser := NewCOMPParser()
-	
+
 	records, err := parser.Parse("")
 	if err != nil {
 		t.Fatalf("Parse empty content failed: %v", err)
@@ -192,7 +163,7 @@ func TestCOMPParser_EmptyContent(t *testing.T) {
 
 func TestCOMPParser_WithEmptyLines(t *testing.T) {
 	parser := NewCOMPParser()
-	
+
 	content := `9170917000047 2102-530            028092023 12033171106062024    
 
 9170917000047 2102-510            028092023 12033171106062024    
@@ -211,19 +182,19 @@ func TestCOMPParser_WithEmptyLines(t *testing.T) {
 
 func TestCOMPParser_InvalidLineLength(t *testing.T) {
 	parser := NewCOMPParser()
-	
-	// Line too long should fail
+
+	// Line too long should now be handled by truncation
 	content := strings.Repeat("X", 70) // 70 characters, more than 65
-	
-	_, err := parser.Parse(content)
-	if err == nil {
-		t.Error("Expected error for line too long")
+
+	records, err := parser.Parse(content)
+	if err != nil {
+		t.Errorf("Long line should be handled by truncation: %v", err)
 	}
 
-	if !strings.Contains(err.Error(), "line too long") {
-		t.Errorf("Expected line too long error, got: %v", err)
+	if len(records) != 1 {
+		t.Errorf("Expected 1 record, got %d", len(records))
 	}
-	
+
 	// Line too short should work (will be padded)
 	// Use a line that has all required fields but missing trailing spaces
 	shortContent := "9170917000047 2102-530            028092023 12033171106062024"
@@ -235,7 +206,7 @@ func TestCOMPParser_InvalidLineLength(t *testing.T) {
 
 func TestCOMPParser_FieldBounds(t *testing.T) {
 	parser := NewCOMPParser()
-	
+
 	// Test with line exactly at boundary
 	line := strings.Repeat("X", 65)
 	_, err := parser.parseLine(line)
@@ -246,7 +217,7 @@ func TestCOMPParser_FieldBounds(t *testing.T) {
 
 func TestCOMPParser_RequiredFields(t *testing.T) {
 	parser := NewCOMPParser()
-	
+
 	// Test with missing required field (empty INSTIT)
 	line := "    917000047 2102-530            028092023 12033171106062024    "
 	_, err := parser.parseLine(line)
@@ -261,7 +232,7 @@ func TestCOMPParser_RequiredFields(t *testing.T) {
 
 func TestCOMPParser_MultipleRecords(t *testing.T) {
 	parser := NewCOMPParser()
-	
+
 	content := `9170917000047 2102-530            028092023 12033171106062024    
 9170917000440 2102-530            027022024 16264822205112024    
 9170917000116 2102-530            028092023 11450702406062024    `
@@ -286,7 +257,7 @@ func TestCOMPParser_MultipleRecords(t *testing.T) {
 
 func TestCOMPParser_RealWorldData(t *testing.T) {
 	parser := NewCOMPParser()
-	
+
 	// Test with actual data from COMP9170.txt
 	content := `9170917000047 2102-530            028092023 12033171106062024    
 9170917000047 2102-510            028092023 12033171106062024    
@@ -321,13 +292,13 @@ func TestCOMPParser_RealWorldData(t *testing.T) {
 
 func TestCOMPParser_FieldExtraction(t *testing.T) {
 	parser := NewCOMPParser()
-	
+
 	// Test specific field positions
 	line := "9170917000047 2102-530            028092023 12033171106062024    "
 	//        ^   ^        ^                 ^^         ^        ^    ^
 	//        1   5        15                3536       44       54   62
 	//        |<4>|<--10-->|<------ 20 ----->||<--8-->|<--10-->|<-8->|<4>|
-	
+
 	record, err := parser.parseLine(line)
 	if err != nil {
 		t.Fatalf("parseLine failed: %v", err)
@@ -365,7 +336,7 @@ func TestCOMPParser_FieldExtraction(t *testing.T) {
 
 func TestCOMPParser_Specification(t *testing.T) {
 	spec := GetCOMPSpec()
-	
+
 	// Test specification details
 	if spec.FileType != "COMP" {
 		t.Errorf("Expected FileType 'COMP', got '%s'", spec.FileType)
@@ -412,38 +383,38 @@ func TestCOMPParser_Specification(t *testing.T) {
 // Test with actual COMP9170.txt data structure
 func TestCOMPParser_ActualDataStructure(t *testing.T) {
 	parser := NewCOMPParser()
-	
+
 	// Sample line from the actual COMP9170.txt file
 	line := "9170917000047 2102-530            028092023 12033171106062024    "
-	
+
 	// Verify the line is exactly 65 characters
 	if len(line) != 65 {
 		t.Errorf("Expected line length 65, got %d", len(line))
 	}
-	
+
 	record, err := parser.parseLine(line)
 	if err != nil {
 		t.Fatalf("Failed to parse actual data: %v", err)
 	}
-	
+
 	// Verify the parsed fields match the expected structure
 	expectedValues := map[string]string{
 		"INSTIT":           "9170",
 		"ID":               "917000047",
 		"COURSE":           "2102-530",
-		"COMPLETE":         "0",         // This is '0' in the actual data
+		"COMPLETE":         "0", // This is '0' in the actual data
 		"CRS_SRT":          "28092023",
 		"NSN":              "120331711",
 		"CRS_END":          "06062024",
-		"PBRF_CRS_COMP_YR": "",         // This is empty (spaces) in the actual data
+		"PBRF_CRS_COMP_YR": "", // This is empty (spaces) in the actual data
 	}
-	
+
 	for fieldName, expectedValue := range expectedValues {
 		if record[fieldName] != expectedValue {
 			t.Errorf("Field %s: expected '%s', got '%s'", fieldName, expectedValue, record[fieldName])
 		}
 	}
-	
+
 	// Verify all fields are present
 	for _, field := range parser.GetSpec().Fields {
 		if _, exists := record[field.Name]; !exists {

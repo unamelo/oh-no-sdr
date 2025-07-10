@@ -22,5 +22,4 @@ type Parser interface {
 	Parse(content string) ([]map[string]string, error)
 	GetHeaders() []string
 	GetFileType() string
-	ValidateLine(line string) error
 }
