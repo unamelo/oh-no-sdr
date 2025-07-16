@@ -19,6 +19,9 @@ func NewCOMPParser() *COMPParser {
 
 // Parse parses the content and returns records as maps
 func (p *COMPParser) Parse(content string) ([]map[string]string, error) {
+	// Handle both Windows (\r\n) and Unix (\n) line endings
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.ReplaceAll(content, "\r", "\n")
 	lines := strings.Split(strings.TrimSpace(content), "\n")
 	var records []map[string]string
 
@@ -45,6 +48,10 @@ func (p *COMPParser) parseLine(line string) (map[string]string, error) {
 	// Pad line to expected length if it's shorter (common with trailing spaces missing)
 	if len(line) < p.spec.LineLength {
 		line = line + strings.Repeat(" ", p.spec.LineLength-len(line))
+	}
+	// Truncate line if it's longer (handle data quality issues)
+	if len(line) > p.spec.LineLength {
+		line = line[:p.spec.LineLength]
 	}
 
 	record := make(map[string]string)
