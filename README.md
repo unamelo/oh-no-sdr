@@ -1,29 +1,28 @@
-      ___  _   _       _   _         ____   ____  
-     / _ \\| | | | ___ | \\ | | ___   / ___| / ___| 
-    | | | | |_| |/ _ \\|  \\| |/ _ \\  \\___ \\| |     
-    | |_| |  _  | (_) | |\\  |  __/   ___) | |___  
-     \\___/|_| |_|\\___/|_| \\_|\\___|  |____/ \\____| 
+ ██████╗ ██╗  ██╗    ███╗   ██╗ ██████╗     ███████╗██████╗ ██████╗ 
+██╔═══██╗██║  ██║    ████╗  ██║██╔═══██╗    ██╔════╝██╔══██╗██╔══██╗
+██║   ██║███████║    ██╔██╗ ██║██║   ██║    ███████╗██║  ██║██████╔╝
+██║   ██║██╔══██║    ██║╚██╗██║██║   ██║    ╚════██║██║  ██║██╔══██╗
+╚██████╔╝██║  ██║    ██║ ╚████║╚██████╔╝    ███████║██████╔╝██║  ██║
+ ╚═════╝ ╚═╝  ╚═╝    ╚═╝  ╚═══╝ ╚═════╝     ╚══════╝╚═════╝ ╚═╝  ╚═╝
 
             o h - n o - s d r
 
----Purpose---||--||--
-> _Fill this section with the goal of the project._
+---Purpose---
+- Intended to convert legacy SDR (Single Return Data) text files to comma-separated CSV with headers.
+- No more painful VLOOKUP and copy-paste operations.
 
----Project Snapshot---||--||--
+
+---Project Snapshot---
 - Language: Go
-- Entry point: `main.go`
-- Modules: defined in `go.mod`
+- TUI: Bubbletea https://github.com/charmbracelet/bubbletea
 
----How To Run---||--||--
-1. Install Go 1.21+ if you have not already.
-2. From the project root, download dependencies: `go mod tidy` (optional when modules are already cached).
+---How To Run---
+1. Install Go 1.21+
+`curl -sS https://webi.sh/golang | sh`
+2. From the project root, download dependencies: `go mod tidy`.
 3. Build the binary: `go build ./...`
 4. Run the app: `go run ./...`
 
----Troubleshooting---||--||--
+---Troubleshooting---
 - If Go complains about missing modules, re-run `go mod tidy`.
-- Confirm your `GOPATH` and `GOROOT` are configured if Go commands are unavailable.
 
----Next Steps---||--||--
-- Document configuration flags or environment variables.
-- Add usage examples once the project behavior is finalized.
