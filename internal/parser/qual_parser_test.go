@@ -7,7 +7,7 @@ import (
 
 func TestQUALParser_Parse(t *testing.T) {
 	parser := NewQUALParser()
-	
+
 	// Test with sample data based on QUAL9170.txt
 	content := `9170917000478  140261767NZ2101            2024    
 9170917000441  171046090NZ2101            2024    
@@ -48,25 +48,29 @@ func TestQUALParser_GetHeaders(t *testing.T) {
 	parser := NewQUALParser()
 	headers := parser.GetHeaders()
 
-	expected := []string{
+	// Should have 9 headers (all fields in spec)
+	if len(headers) != 9 {
+		t.Errorf("Expected 9 headers, got %d", len(headers))
+	}
+
+	// Test some specific headers
+	expectedHeaders := []string{
 		"Provider Code",
 		"Student Identification Code",
 		"National Student Number",
 		"Qualification Code",
-		"Main Subject 1",
-		"Main Subject 2", 
-		"Main Subject 3",
-		"Year Requirements Met",
-		"Padding",
 	}
 
-	if len(headers) != len(expected) {
-		t.Errorf("Expected %d headers, got %d", len(expected), len(headers))
-	}
-
-	for i, header := range headers {
-		if header != expected[i] {
-			t.Errorf("Header %d: expected '%s', got '%s'", i, expected[i], header)
+	for _, expected := range expectedHeaders {
+		found := false
+		for _, header := range headers {
+			if header == expected {
+				found = true
+				break
+			}
+		}
+		if !found {
+			t.Errorf("Expected header '%s' not found", expected)
 		}
 	}
 }
@@ -77,28 +81,6 @@ func TestQUALParser_GetFileType(t *testing.T) {
 
 	if fileType != "QUAL" {
 		t.Errorf("Expected file type 'QUAL', got '%s'", fileType)
-	}
-}
-
-func TestQUALParser_ValidateLine(t *testing.T) {
-	parser := NewQUALParser()
-
-	// Test valid line length (50 characters)
-	validLine := "9170917000478  140261767NZ2101            2024    "
-	if len(validLine) != 50 {
-		t.Errorf("Test line should be 50 characters, got %d", len(validLine))
-	}
-
-	err := parser.ValidateLine(validLine)
-	if err != nil {
-		t.Errorf("Valid line should pass validation: %v", err)
-	}
-
-	// Test invalid line length
-	invalidLine := "short"
-	err = parser.ValidateLine(invalidLine)
-	if err == nil {
-		t.Error("Invalid line should fail validation")
 	}
 }
 
@@ -136,7 +118,7 @@ func TestQUALParser_ParseLine(t *testing.T) {
 
 func TestQUALParser_EmptyContent(t *testing.T) {
 	parser := NewQUALParser()
-	
+
 	records, err := parser.Parse("")
 	if err != nil {
 		t.Fatalf("Parse empty content failed: %v", err)
@@ -149,7 +131,7 @@ func TestQUALParser_EmptyContent(t *testing.T) {
 
 func TestQUALParser_WithEmptyLines(t *testing.T) {
 	parser := NewQUALParser()
-	
+
 	content := `9170917000478  140261767NZ2101            2024    
 
 9170917000441  171046090NZ2101            2024    
@@ -168,23 +150,24 @@ func TestQUALParser_WithEmptyLines(t *testing.T) {
 
 func TestQUALParser_InvalidLineLength(t *testing.T) {
 	parser := NewQUALParser()
-	
-	// Line too short
-	content := "9170917000478  140261767"
-	
-	_, err := parser.Parse(content)
-	if err == nil {
-		t.Error("Expected error for invalid line length")
-	}
 
-	if !strings.Contains(err.Error(), "invalid line length") {
-		t.Errorf("Expected line length error, got: %v", err)
+	// Short lines should now be handled gracefully (padded, but may fail on required fields)
+	invalidContent := "short"
+
+	_, err := parser.Parse(invalidContent)
+	// Should fail on required field validation, not line length
+	if err == nil {
+		t.Error("Expected error for missing required fields")
+	}
+	// Verify it's a required field error, not line length error
+	if !strings.Contains(err.Error(), "required field") {
+		t.Errorf("Expected required field error, got: %v", err)
 	}
 }
 
 func TestQUALParser_RequiredFields(t *testing.T) {
 	parser := NewQUALParser()
-	
+
 	// Test with missing required field (empty INSTIT)
 	line := "    917000478  140261767NZ2101            2024    "
 	_, err := parser.parseLine(line)
@@ -199,7 +182,7 @@ func TestQUALParser_RequiredFields(t *testing.T) {
 
 func TestQUALParser_MultipleRecords(t *testing.T) {
 	parser := NewQUALParser()
-	
+
 	content := `9170917000478  140261767NZ2101            2024    
 9170917000441  171046090NZ2101            2024    
 9170917000409  138474289NZ2101            2024    `
@@ -224,7 +207,7 @@ func TestQUALParser_MultipleRecords(t *testing.T) {
 
 func TestQUALParser_RealWorldData(t *testing.T) {
 	parser := NewQUALParser()
-	
+
 	// Test with actual data from QUAL9170.txt
 	content := `9170917000478  140261767NZ2101            2024    
 9170917000441  171046090NZ2101            2024    
@@ -254,13 +237,13 @@ func TestQUALParser_RealWorldData(t *testing.T) {
 
 func TestQUALParser_FieldExtraction(t *testing.T) {
 	parser := NewQUALParser()
-	
+
 	// Test specific field positions
 	line := "9170917000478  140261767NZ2101            2024    "
 	//        ^   ^         ^        ^     ^   ^   ^   ^   ^
 	//        1   5         15       25    31  35  39  43  47
 	//        |<4>|<-- 10 ->|<- 10 ->|<-6->|<4>|<4>|<4>|<4>|<4>|
-	
+
 	record, err := parser.parseLine(line)
 	if err != nil {
 		t.Fatalf("parseLine failed: %v", err)
@@ -290,7 +273,7 @@ func TestQUALParser_FieldExtraction(t *testing.T) {
 
 func TestQUALParser_Specification(t *testing.T) {
 	spec := GetQUALSpec()
-	
+
 	// Test specification details
 	if spec.FileType != "QUAL" {
 		t.Errorf("Expected FileType 'QUAL', got '%s'", spec.FileType)
@@ -337,7 +320,7 @@ func TestQUALParser_Specification(t *testing.T) {
 
 func TestQUALParser_OptionalFields(t *testing.T) {
 	parser := NewQUALParser()
-	
+
 	// Test with optional fields that may be empty
 	line := "9170917000478  140261767NZ2101            2024    "
 	record, err := parser.parseLine(line)

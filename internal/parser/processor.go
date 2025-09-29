@@ -67,7 +67,7 @@ func (w *CSVWriter) writeSTUDRecords(writer *csv.Writer, records []map[string]st
 		for j, field := range parser.spec.Fields {
 			row[j] = record[field.Name]
 		}
-		
+
 		if err := writer.Write(row); err != nil {
 			return fmt.Errorf("failed to write record %d: %w", i+1, err)
 		}
@@ -83,7 +83,7 @@ func (w *CSVWriter) writeCourseEnrolmentRecords(writer *csv.Writer, records []ma
 		for j, field := range parser.spec.Fields {
 			row[j] = record[field.Name]
 		}
-		
+
 		// Add comparison data if enabled
 		if parser.comparisonEnabled {
 			// Add empty columns for spacing
@@ -91,7 +91,7 @@ func (w *CSVWriter) writeCourseEnrolmentRecords(writer *csv.Writer, records []ma
 			// Add completion status
 			row = append(row, record["COMPLETE"])
 		}
-		
+
 		if err := writer.Write(row); err != nil {
 			return fmt.Errorf("failed to write record %d: %w", i+1, err)
 		}
@@ -106,7 +106,7 @@ func (w *CSVWriter) writeCREGRecords(writer *csv.Writer, records []map[string]st
 		for j, field := range parser.spec.Fields {
 			row[j] = record[field.Name]
 		}
-		
+
 		if err := writer.Write(row); err != nil {
 			return fmt.Errorf("failed to write record %d: %w", i+1, err)
 		}
@@ -121,7 +121,7 @@ func (w *CSVWriter) writeCOMPRecords(writer *csv.Writer, records []map[string]st
 		for j, field := range parser.spec.Fields {
 			row[j] = record[field.Name]
 		}
-		
+
 		if err := writer.Write(row); err != nil {
 			return fmt.Errorf("failed to write record %d: %w", i+1, err)
 		}
@@ -136,7 +136,7 @@ func (w *CSVWriter) writeQUALRecords(writer *csv.Writer, records []map[string]st
 		for j, field := range parser.spec.Fields {
 			row[j] = record[field.Name]
 		}
-		
+
 		if err := writer.Write(row); err != nil {
 			return fmt.Errorf("failed to write record %d: %w", i+1, err)
 		}
@@ -163,6 +163,12 @@ func ProcessFileWithComparison(inputPath string, outputDir string, enableCompari
 		return result
 	}
 
+	// Normalize line endings before processing
+	// First replace all \r\n with \n
+	contentStr := strings.ReplaceAll(string(content), "\r\n", "\n")
+	// Then replace any remaining \r with \n
+	contentStr = strings.ReplaceAll(contentStr, "\r", "\n")
+
 	// Determine file type from filename
 	filename := filepath.Base(inputPath)
 	fileType := DetectFileType(filename)
@@ -187,7 +193,7 @@ func ProcessFileWithComparison(inputPath string, outputDir string, enableCompari
 				result.Error = fmt.Errorf("failed to enable comparison mode: %w", err)
 				return result
 			}
-			
+
 			// Log any warnings about comparison data loading
 			warnings := courParser.GetComparisonWarnings()
 			for _, warning := range warnings {
@@ -197,7 +203,7 @@ func ProcessFileWithComparison(inputPath string, outputDir string, enableCompari
 	}
 
 	// Parse content
-	records, err := parser.Parse(string(content))
+	records, err := parser.Parse(contentStr)
 	if err != nil {
 		result.Error = fmt.Errorf("failed to parse file: %w", err)
 		return result
@@ -214,7 +220,7 @@ func ProcessFileWithComparison(inputPath string, outputDir string, enableCompari
 	// Write CSV
 	csvWriter := NewCSVWriter()
 	headers := parser.GetHeaders()
-	
+
 	if err := csvWriter.WriteCSV(records, headers, outputPath, parser); err != nil {
 		result.Error = fmt.Errorf("failed to write CSV: %w", err)
 		return result
@@ -227,7 +233,7 @@ func ProcessFileWithComparison(inputPath string, outputDir string, enableCompari
 // DetectFileType attempts to determine file type from filename
 func DetectFileType(filename string) string {
 	upper := strings.ToUpper(filename)
-	
+
 	if strings.Contains(upper, "STUD") {
 		return "STUD"
 	} else if strings.Contains(upper, "COUR") {
@@ -239,7 +245,7 @@ func DetectFileType(filename string) string {
 	} else if strings.Contains(upper, "QUAL") {
 		return "QUAL"
 	}
-	
+
 	return ""
 }
 

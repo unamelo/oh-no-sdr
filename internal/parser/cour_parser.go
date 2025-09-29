@@ -53,7 +53,7 @@ func (p *CourseEnrolmentParser) GetHeaders() []string {
 	for i, field := range p.spec.Fields {
 		headers[i] = field.Title
 	}
-	
+
 	// Add comparison data headers if enabled
 	if p.comparisonEnabled {
 		// Add empty columns for spacing (2 columns separation)
@@ -61,35 +61,39 @@ func (p *CourseEnrolmentParser) GetHeaders() []string {
 		// Add comparison data column
 		headers = append(headers, "Student Course Completion indicator")
 	}
-	
+
 	return headers
 }
 
 // Parse parses the entire file content and returns records
 func (p *CourseEnrolmentParser) Parse(content string) ([]map[string]string, error) {
-	lines := strings.Split(content, "\n")
+	// Handle both Windows (\r\n) and Unix (\n) line endings
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.ReplaceAll(content, "\r", "\n")
+	lines := strings.Split(strings.TrimSpace(content), "\n")
 	var records []map[string]string
-	
+
 	for i, line := range lines {
 		lineNum := i + 1
-		
-		// Skip empty lines
-		if strings.TrimSpace(line) == "" {
+
+		// Skip empty lines and trim any extra whitespace
+		line = strings.TrimSpace(line)
+		if line == "" {
 			continue
 		}
-		
+
 		// Parse line
 		values, err := p.ParseLine(line, lineNum)
 		if err != nil {
 			return nil, fmt.Errorf("error parsing line %d: %w", lineNum, err)
 		}
-		
+
 		// Create record map
 		record := make(map[string]string)
 		for j, field := range p.spec.Fields {
 			record[field.Name] = values[j]
 		}
-		
+
 		// Add comparison data if enabled
 		if p.comparisonEnabled {
 			completionStatus := p.comparisonService.LookupCompletion(
@@ -99,69 +103,46 @@ func (p *CourseEnrolmentParser) Parse(content string) ([]map[string]string, erro
 			)
 			record["COMPLETE"] = completionStatus
 		}
-		
+
 		records = append(records, record)
 	}
-	
+
 	return records, nil
-}
-
-// ValidateLine validates a single line format (updated signature for Parser interface)
-func (p *CourseEnrolmentParser) ValidateLine(line string) error {
-	return p.validateLineWithNumber(line, 1)
-}
-
-// validateLineWithNumber validates a single line format with line number
-func (p *CourseEnrolmentParser) validateLineWithNumber(line string, lineNum int) error {
-	if len(line) > p.spec.LineLength {
-		return fmt.Errorf("line %d: line too long %d, expected max %d", lineNum, len(line), p.spec.LineLength)
-	}
-	
-	// Check required fields
-	for _, field := range p.spec.Fields {
-		if field.Required {
-			start := field.Start - 1
-			end := start + field.Length
-			if start >= len(line) || end > len(line) {
-				return fmt.Errorf("line %d: cannot extract required field %s (positions %d-%d)", lineNum, field.Name, field.Start, field.Start+field.Length-1)
-			}
-			fieldValue := strings.TrimSpace(line[start:end])
-			if fieldValue == "" {
-				return fmt.Errorf("line %d: required field %s is empty", lineNum, field.Name)
-			}
-		}
-	}
-	
-	return nil
 }
 
 // ParseLine parses a single line and returns field values
 func (p *CourseEnrolmentParser) ParseLine(line string, lineNum int) ([]string, error) {
-	if err := p.validateLineWithNumber(line, lineNum); err != nil {
-		return nil, err
-	}
-	
 	// Pad line to expected length if it's shorter (common with trailing spaces missing)
 	if len(line) < p.spec.LineLength {
 		line = line + strings.Repeat(" ", p.spec.LineLength-len(line))
 	}
-	
+	// Truncate line if it's longer (handle data quality issues)
+	if len(line) > p.spec.LineLength {
+		line = line[:p.spec.LineLength]
+	}
+
 	values := make([]string, len(p.spec.Fields))
 	for i, field := range p.spec.Fields {
 		start := field.Start - 1
 		end := start + field.Length
-		
+
 		if start >= len(line) || end > len(line) {
 			values[i] = ""
 			continue
 		}
-		
+
 		value := line[start:end]
 		// Trim both leading and trailing spaces
 		value = strings.TrimSpace(value)
+
+		// Check required fields
+		if field.Required && value == "" {
+			return nil, fmt.Errorf("line %d: required field %s is empty", lineNum, field.Name)
+		}
+
 		values[i] = value
 	}
-	
+
 	return values, nil
 }
 
@@ -172,7 +153,7 @@ func (p *CourseEnrolmentParser) IsMatchingFileType(filename string, firstLine st
 	if strings.Contains(upperFilename, "COUR") {
 		return true
 	}
-	
+
 	// Check line length
 	if len(firstLine) == p.spec.LineLength {
 		// Additional validation: check if it looks like a COUR record
@@ -192,7 +173,7 @@ func (p *CourseEnrolmentParser) IsMatchingFileType(filename string, firstLine st
 			}
 		}
 	}
-	
+
 	return false
 }
 

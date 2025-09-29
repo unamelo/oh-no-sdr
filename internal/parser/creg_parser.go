@@ -19,18 +19,17 @@ func NewCREGParser() *CREGParser {
 
 // Parse parses the content and returns records as maps
 func (p *CREGParser) Parse(content string) ([]map[string]string, error) {
+	// Handle both Windows (\r\n) and Unix (\n) line endings
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.ReplaceAll(content, "\r", "\n")
 	lines := strings.Split(strings.TrimSpace(content), "\n")
 	var records []map[string]string
 
 	for lineNum, line := range lines {
-		// Skip empty lines
-		if strings.TrimSpace(line) == "" {
+		// Skip empty lines and trim any extra whitespace
+		line = strings.TrimSpace(line)
+		if line == "" {
 			continue
-		}
-
-		// Validate line length
-		if err := p.ValidateLine(line); err != nil {
-			return nil, fmt.Errorf("line %d: %w", lineNum+1, err)
 		}
 
 		// Parse the line
@@ -47,6 +46,15 @@ func (p *CREGParser) Parse(content string) ([]map[string]string, error) {
 
 // parseLine extracts fields from a single line
 func (p *CREGParser) parseLine(line string) (map[string]string, error) {
+	// Pad line to expected length if it's shorter (common with trailing spaces missing)
+	if len(line) < p.spec.LineLength {
+		line = line + strings.Repeat(" ", p.spec.LineLength-len(line))
+	}
+	// Truncate line if it's longer (handle data quality issues)
+	if len(line) > p.spec.LineLength {
+		line = line[:p.spec.LineLength]
+	}
+
 	record := make(map[string]string)
 
 	for _, field := range p.spec.Fields {
@@ -56,13 +64,13 @@ func (p *CREGParser) parseLine(line string) (map[string]string, error) {
 
 		// Bounds checking
 		if start < 0 || end > len(line) {
-			return nil, fmt.Errorf("field %s: position out of bounds (start: %d, end: %d, line length: %d)", 
+			return nil, fmt.Errorf("field %s: position out of bounds (start: %d, end: %d, line length: %d)",
 				field.Name, start, end, len(line))
 		}
 
 		// Extract field value
 		value := line[start:end]
-		
+
 		// Trim both leading and trailing spaces
 		value = strings.TrimSpace(value)
 
@@ -89,12 +97,4 @@ func (p *CREGParser) GetHeaders() []string {
 // GetFileType returns the file type
 func (p *CREGParser) GetFileType() string {
 	return p.spec.FileType
-}
-
-// ValidateLine validates a line's basic structure
-func (p *CREGParser) ValidateLine(line string) error {
-	if len(line) != p.spec.LineLength {
-		return fmt.Errorf("invalid line length: expected %d, got %d", p.spec.LineLength, len(line))
-	}
-	return nil
 }

@@ -19,6 +19,9 @@ func NewCOMPParser() *COMPParser {
 
 // Parse parses the content and returns records as maps
 func (p *COMPParser) Parse(content string) ([]map[string]string, error) {
+	// Handle both Windows (\r\n) and Unix (\n) line endings
+	content = strings.ReplaceAll(content, "\r\n", "\n")
+	content = strings.ReplaceAll(content, "\r", "\n")
 	lines := strings.Split(strings.TrimSpace(content), "\n")
 	var records []map[string]string
 
@@ -26,11 +29,6 @@ func (p *COMPParser) Parse(content string) ([]map[string]string, error) {
 		// Skip empty lines
 		if strings.TrimSpace(line) == "" {
 			continue
-		}
-
-		// Validate line length
-		if err := p.ValidateLine(line); err != nil {
-			return nil, fmt.Errorf("line %d: %w", lineNum+1, err)
 		}
 
 		// Parse the line
@@ -51,7 +49,11 @@ func (p *COMPParser) parseLine(line string) (map[string]string, error) {
 	if len(line) < p.spec.LineLength {
 		line = line + strings.Repeat(" ", p.spec.LineLength-len(line))
 	}
-	
+	// Truncate line if it's longer (handle data quality issues)
+	if len(line) > p.spec.LineLength {
+		line = line[:p.spec.LineLength]
+	}
+
 	record := make(map[string]string)
 
 	for _, field := range p.spec.Fields {
@@ -61,13 +63,13 @@ func (p *COMPParser) parseLine(line string) (map[string]string, error) {
 
 		// Bounds checking
 		if start < 0 || end > len(line) {
-			return nil, fmt.Errorf("field %s: position out of bounds (start: %d, end: %d, line length: %d)", 
+			return nil, fmt.Errorf("field %s: position out of bounds (start: %d, end: %d, line length: %d)",
 				field.Name, start, end, len(line))
 		}
 
 		// Extract field value
 		value := line[start:end]
-		
+
 		// Trim both leading and trailing spaces
 		value = strings.TrimSpace(value)
 
@@ -94,14 +96,6 @@ func (p *COMPParser) GetHeaders() []string {
 // GetFileType returns the file type
 func (p *COMPParser) GetFileType() string {
 	return p.spec.FileType
-}
-
-// ValidateLine validates a line's basic structure
-func (p *COMPParser) ValidateLine(line string) error {
-	if len(line) > p.spec.LineLength {
-		return fmt.Errorf("line too long: expected max %d, got %d", p.spec.LineLength, len(line))
-	}
-	return nil
 }
 
 // GetSpec returns the file specification
